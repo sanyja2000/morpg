@@ -1,0 +1,1347 @@
+<html>
+    <head>
+
+        <style>
+            *{margin:0; padding:0;}
+            .pixelated {
+                image-rendering:optimizeSpeed;             /* Legal fallback */
+                image-rendering:-moz-crisp-edges;          /* Firefox        */
+                image-rendering:-o-crisp-edges;            /* Opera          */
+                image-rendering:-webkit-optimize-contrast; /* Safari         */
+                image-rendering:optimize-contrast;         /* CSS3 Proposed  */
+                image-rendering:crisp-edges;               /* CSS4 Proposed  */
+                image-rendering:pixelated;                 /* CSS4 Proposed  */
+                -ms-interpolation-mode:nearest-neighbor;   /* IE8+           */
+                display:none;
+            }
+            @font-face {
+                font-family: rubbero;
+                src: url(font/arcadeclassic.regular.ttf);
+            }
+            #loginBox{
+                margin:150px auto;
+                width:50%;
+                color:white;
+                border:1px solid brown;
+                background: brown;
+                text-align:center;
+                padding:20px;
+                border-radius:20px;
+                box-shadow: 5px 5px 20px rgba(0,0,0,0.4);
+            }
+            #loginBox input{
+                margin:5px;
+            }
+            #loginBox select{
+                margin:5px;
+            }
+            #loginBox button{
+                padding:5px;
+                text-transform: uppercase;
+            }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
+        <script src="js/inventory.js"></script>
+        <script src="js/quest.js"></script>
+    </head>
+    <body>
+
+        <div id="loginBox">
+            Name:<input placeholder="John" id="username"><br>
+            Skin:<select id="skins">
+                <option value="0">Red</option>
+                <option value="1">Green</option>
+                <option value="2">Blue</option>
+                <option value="3">Pear</option>
+            </select>
+            <br>
+            <button onclick="startLoading()">Play</button>
+        </div>
+
+    <canvas id="myCanvas" class="pixelated">Your browser doesn't support the HTML5 canvas.</canvas>
+
+    <script>
+
+
+var socket;
+
+var moveSpeed = [2,2];
+var moveDirection = [0,0];
+
+var canvas = document.getElementById("myCanvas");
+var tileSize = 32;
+var scaleSize = 48;
+var WIDTH = canvas.width = window.innerWidth/(scaleSize/tileSize);
+var HEIGHT = canvas.height = window.innerHeight/(scaleSize/tileSize);
+canvas.style.width= window.innerWidth;
+canvas.style.height = window.innerHeight;
+var ctx = canvas.getContext("2d");
+var doc;
+var layers = 1;
+var tilesets = 1;
+var mapWidth;
+var mapHeight;
+
+var mapName = "Magington city";
+var mapNameOpacity = 2;
+
+var tilesetPics = [];
+var tilesetFiles = [];
+var layerContents = [];
+var tilesetStartIds = [];
+var tilesetDimensions = [];
+var alreadyConnected = false;
+var gameloop;
+
+var keysDown = [];
+
+var playerHealth = 100;
+var playerMaxHealth = 100;
+
+//AUDIO IMPORT START
+
+var newWorldSound = new Audio();
+newWorldSound.src = "sound/newWorld.wav";
+newWorldSound.volume = 0.15;
+
+var walkSound = new Audio();
+walkSound.src = "sound/step7.wav";
+walkSound.volume = 0.3;
+
+var pickUpSound = new Audio();
+pickUpSound.src = "sound/pickup3.wav";
+pickUpSound.volume = 0.4;
+
+var dialogBubbleSound = new Audio();
+dialogBubbleSound.src = "sound/dialogBubble.wav";
+dialogBubbleSound.volume = 0.3;
+
+var missionCompleteSound = new Audio();
+missionCompleteSound.src = "sound/missionComplete.wav";
+missionCompleteSound.volume = 0.3;
+
+var missionAcceptedSound = new Audio();
+missionAcceptedSound.src = "sound/missionAccepted.wav";
+missionAcceptedSound.volume = 0.3;
+
+var swordClangSound = new Audio();
+swordClangSound.src = "sound/swordclang.wav";
+swordClangSound.volume = 0.2;
+
+var swordWhooshSound = new Audio();
+swordWhooshSound.src = "sound/swordwhoosh.wav";
+swordWhooshSound.volume = 0.1;
+
+var hurtSound = new Audio();
+hurtSound.src = "sound/hurt.wav";
+hurtSound.volume = 0.3;
+
+var messageBubble = new Image();
+messageBubble.src = "img/messagebubble_f.png";
+
+var questsHeader = new Image();
+questsHeader.src = "img/quests_b.png";
+
+var settingsMenuImage = new Image();
+settingsMenuImage.src = "img/settingsMenu.png";
+//TODO play map specific music
+
+var backgroundMusicFiles = ["sound/music/ES_Red_Star.mp3"];
+var backgroundCurrentMusic = -1;
+var backgroundMusicObjects = [];
+for(var i=0;i<backgroundMusicFiles.length;i++){
+    var bgMusic = new Audio();
+    bgMusic.src = backgroundMusicFiles[i];
+    bgMusic.volume = 0.05;
+    //bgMusic.play();
+    bgMusic.onended = function(){
+        shuffleBackgroundMusic();
+    }
+    backgroundMusicObjects.push(bgMusic);
+}
+
+function shuffleBackgroundMusic(){
+    backgroundCurrentMusic = Math.floor(Math.random())*backgroundMusicFiles.length;
+    backgroundMusicObjects[backgroundCurrentMusic].play();
+}
+
+function toggleMusic(){
+    if(backgroundMusicObjects[backgroundCurrentMusic].paused){
+        backgroundMusicObjects[backgroundCurrentMusic].play();
+    }else{
+        backgroundMusicObjects[backgroundCurrentMusic].pause();
+    }
+}
+
+//AUDIO IMPORT END
+
+//PLAYER IMAGE IMPORT START
+
+var players = [];
+
+var playerCanMove = true;
+var playerSkinImgs = [];
+
+for(var i=3;i<7;i++){
+    var pImg = new Image();
+    pImg.src = "img/character"+i+".png";
+    playerSkinImgs.push(pImg);
+}
+
+
+var playerSwordImgs = [];
+for(var i=3;i<7;i++){
+    var pImg = new Image();
+    pImg.src = "img/character_sword"+i+".png";
+    playerSwordImgs.push(pImg);
+}
+
+//PLAYER IMAGE IMPORT END
+
+
+var playerName = "";
+var playerSkin = 0;
+
+var playerX = 250;
+var playerY = 200;
+var viewportX = 0;
+var viewportY = 0;
+var droppedItems = [];
+
+var playerHitting = false;
+var playerFacing = 0;
+
+var currentMap = 0;
+
+var dialogBoxText = [];
+var customDialog = false;
+var currentNPCPage = 0;
+
+var respawnTimer = -1;
+
+var acceptedQuestIds = [];
+
+var monsters = [];
+var monsterFiles = ["img/ghost.png","img/pumpkivern.png"];
+var monsterImgs = [];
+
+for(var i=0;i<monsterFiles.length;i++){
+    var mImg = new Image();
+    mImg.src = monsterFiles[i];
+    monsterImgs.push(mImg);
+}
+
+var testFont = "10px Arial";
+
+var infoBoards = [
+    new infoBoard(["  Left: Magington town","  Right: Cementary","  Down: Sailor's house"],2658, 710),
+    new infoBoard(["    Magington Cementary  ","","             Since  1765 "],3136, 608),
+    new infoBoard(["    James Smith  ","","      1771-1814 "],2820, 486),
+    new infoBoard(["    Jonathan Brown  ","","      1782-1844 "],2916, 486),
+    new infoBoard(["    Dick Thunder  ","","      1802-1865 "],3012, 486),
+    new infoBoard(["    Jack Speare  ","","      1809-1876 "],3108, 486),
+    new infoBoard(["    William Nelson  ","","      1786-1832 "],3206, 486),
+    new infoBoard(["    Jeremy Butcher  ","","      1832-1853 "],3144, 384),
+    new infoBoard(["    Robin Park  ","","      1792-1848 "],2946, 384),
+    new infoBoard(["    Doug Dimmadome  ","","      1767-1806 "],2852, 384),
+    new infoBoard(["    Jessica Stacy  ","","      1781-1854 "],2822, 288),
+    new infoBoard(["    Adam Baily  ","","      1799-1869 "],2918, 288),
+    new infoBoard(["    Virginia Mullins  ","    Rest In Peace","      1701-1765 ","Love from your family"],3026, 320),
+    new infoBoard(["    Rogan Grey  ","","      1797-1871 "],3108, 292),
+    new infoBoard(["    Isha Naylor  ","","      1812-18xx "],3182, 300)
+    
+];
+
+var tpPoints = [];
+var tpLoadingImages = [];
+
+function infoBoard(text,x,y){
+    this.x = x;
+    this.y = y;
+    this.text = text;
+    this.checkPlayerCollision = function(){
+        if((this.x-playerX)**2+(this.y-playerY)**2<200){
+            return true;
+        }
+        return false;
+    }
+}
+
+
+function checkPlayerCollisionWithTpPoint(tpPoint){
+    if((tpPoint.x-playerX)**2+(tpPoint.y-playerY)**2<400){
+        return true;
+    }
+    return false;
+}
+
+
+var numberParticles = [];
+
+var projectiles = [];
+
+var projectileImg = new Image();
+projectileImg.src = "img/projectiles/ball_projectiles.png";
+
+function drawProjectile(projectile){
+    ctx.drawImage(projectileImg,14*projectile.color,0,14,14,projectile.x-viewportX,projectile.y-viewportY,14,14);
+}
+
+
+function numberParticle(text,x,y,color){
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.lifespan = 50;
+    this.text = text;
+    this.update = function(){
+        this.y-=1;
+        this.lifespan--;
+        if(this.lifespan<1){
+            return false;
+        }
+        return true;
+    }
+    this.draw = function(){
+        ctx.font = "10px Arial";
+        ctx.fillStyle = this.color;
+        ctx.fillText(this.text,this.x-viewportX,this.y-viewportY);
+    }
+}
+
+function startLoading(){
+    playerName = document.getElementById("username").value;
+    playerSkin = document.getElementById("skins").value;
+    if(playerName == "" || playerName.length>20){
+        alert("Please choose a valid username!");
+        return;
+    }
+    document.getElementById("loginBox").style.display = "none";
+    canvas.style.display = "block";
+    x.send(null);
+    shuffleBackgroundMusic();
+}
+
+function changeToMap(tpPoint){
+    clearInterval(gameloop);
+    
+    //TODO new interval->loading animation
+    //+ new map -> new music, play with setInterval
+
+    ctx.drawImage(tpLoadingImages[tpPoints.indexOf(tpPoint)],0,0,WIDTH,HEIGHT);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    ctx.fillText(tpPoint.name,WIDTH/6,HEIGHT/2);
+    ctx.font = "15px Arial";
+    ctx.fillText("Loading...",WIDTH/6,HEIGHT/2+25);
+    socket.emit("changeToMap",{from:currentMap,to:tpPoint.toMap});
+    if(tpPoint.toMap==1){
+        currentMap = tpPoint.toMap;
+        x.open("GET", "http://"+window.location.hostname+":80/tiled/underworld.tmx", true);
+    }else if(tpPoint.toMap==2){
+        currentMap = tpPoint.toMap;
+        x.open("GET", "http://"+window.location.hostname+":80/tiled/house1.tmx", true);
+    }else{
+        currentMap = tpPoint.toMap;
+        x.open("GET", "http://"+window.location.hostname+":80/tiled/map1.tmx", true);
+    }
+    playerX = tpPoint.spawnX;
+    playerY = tpPoint.spawnY;
+    tilesetPics = [];
+    tilesetFiles = [];
+    layerContents = [];
+    tilesetStartIds = [];
+    tilesetDimensions = [];
+    tpPoints = [];
+    mapName = tpPoint.mapName;
+    mapNameOpacity = 2;
+    x.send(null);
+}
+
+var x = new XMLHttpRequest();
+x.overrideMimeType('application/xml');
+x.open("GET", "http://"+window.location.hostname+":80/tiled/map1.tmx", true);
+//x.open("GET", "http://"+window.location.hostname+":80/tiled/underworld.tmx", true);
+x.onreadystatechange = function () {
+  if (x.readyState == 4 && x.status == 200)
+  {
+    doc = x.responseXML;
+    tilesets = doc.getElementsByTagName("tileset").length;
+    layers = doc.getElementsByTagName("layer").length;
+    mapWidth = doc.children[0].getAttribute("width");
+    mapHeight = doc.children[0].getAttribute("height");
+    for(var i=0;i<layers;i++){
+        console.log(doc);
+
+        layerContents.push(doc.getElementById(""+(i+1)).children[0].innerHTML.replace(/\r?\n|\r/g,""));
+        layerContents[i]=layerContents[i].split(",");
+    }
+
+    for(var i=0;i<tilesets;i++){
+        tilesetFiles.push(doc.children[0].children[i].getAttribute("source"));
+        tilesetStartIds.push(doc.children[0].children[i].getAttribute("firstgid"));
+    }
+    loadTilesets();
+  }
+};
+
+
+var tilesetn = 0;
+var pages = [];
+function loadTilesets(){
+    for(tilesetn=0;tilesetn<tilesetFiles.length;++tilesetn){
+        pages[tilesetn] = new XMLHttpRequest();
+        //console.log(tilesetFiles[set]);
+        pages[tilesetn].overrideMimeType('application/xml');
+        pages[tilesetn].open("GET", "http://"+window.location.hostname+":80/tiled/"+tilesetFiles[tilesetn], true);
+        console.log(pages[tilesetn]);
+        /*
+        pages[tilesetn].onreadystatechange = function () {
+            if (pages[tilesetn].readyState == 4 && pages[tilesetn].status == 200)
+                {  
+                    console.log(123);
+                    doc = pages[tilesetn].responseXML;
+                    console.log(doc);
+                    //var tmpImg = new Image();
+                    //tmpImg.src = doc.children[0].children[i].getAttribute("source").replace(".tsx",".png");
+                    //tilesetPics.push(tmpImg);
+                }
+        }
+        */
+        pages[tilesetn].send(null);
+    }
+    setTimeout(processTilesets,1500);
+    
+    //gameloop = setInterval(update, 1000/30);
+        
+}
+
+function createItem(_name,_iconNumber,_equipment,_pieces){
+    socket.emit("createItem",{name:_name,iconNumber:_iconNumber,equipment:_equipment,pieces:_pieces,map:currentMap});
+}
+
+function spawnGhost(){
+    socket.emit("spawnGhost",{x:playerX+100,y:playerY,map:currentMap});
+}
+
+function processTilesets(){
+    for(var i = 0;i<pages.length;i++){
+        console.log(pages[i].responseXML);
+        var tmpImg = new Image();
+        tmpImg.src = pages[i].responseXML.children[0].children[0].getAttribute("source").replace("../","");
+        tilesetPics.push(tmpImg);
+        tilesetDimensions.push([parseInt(pages[i].responseXML.children[0].children[0].getAttribute("width")/32),parseInt(pages[i].responseXML.children[0].children[0].getAttribute("height")/32)])
+    }
+
+
+
+
+    gameloop = setInterval(update, 1000/60);
+    newWorldSound.play();
+
+    if(!alreadyConnected){    
+        socket = io.connect("http://"+window.location.hostname+":80");
+        socket.emit("loginInfo",{skin:playerSkin, name:playerName, map:currentMap});
+        socket.on("updateData",updateData);
+        socket.on("checkQuest",checkQuest);
+        socket.on("sounds",playSound);
+        socket.on("damageParticle",addDamageParticle);
+        socket.on("updateMinuteData",updateMinuteData);
+        socket.on("teleport",teleportPlayer);
+        alreadyConnected = true;
+    }
+}
+
+function teleportPlayer(data){
+    playerX = data.x;
+    playerY = data.y;
+}
+
+
+function addDamageParticle(data){
+    /*
+    if(playerFacing == 0){
+        numberParticles.push(new numberParticle(data.damage,playerX+10,playerY-10));
+    }else if(playerFacing == 1){
+        numberParticles.push(new numberParticle(data.damage,playerX+30,playerY+20));
+    }else if(playerFacing == 2){
+        numberParticles.push(new numberParticle(data.damage,playerX+10,playerY+40));
+    }else{
+        numberParticles.push(new numberParticle(data.damage,playerX-10,playerY+20));
+    }*/
+    if(data.as == "attacker"){
+        if(data.type == "physical"){
+            numberParticles.push(new numberParticle(data.damage,data.at[0]+10,data.at[1]+30,"orange"));
+        }
+        else if(data.type == "magic"){
+            numberParticles.push(new numberParticle(data.damage,data.at[0]+10,data.at[1]+41,"cyan"));
+        }
+    }
+    else if(data.as == "victim"){
+        if(data.type == "physical"){
+            numberParticles.push(new numberParticle(data.damage,playerX+10,playerY+30,"red"));
+        }
+        else if(data.type == "magic"){
+            numberParticles.push(new numberParticle(data.damage,playerX+10,playerY+41,"blue"));
+        }
+        else if(data.type == "poison"){
+            numberParticles.push(new numberParticle(data.damage,playerX+10,playerY+41,"green"));
+        }
+        
+    }
+    
+}
+
+function playSound(data){
+    if(data.sound=="pickup"){
+        pickUpSound.currentTime = 0;
+        pickUpSound.play();
+    }
+    else if(data.sound=="swordclang"){
+        swordClangSound.currentTime = 0;
+        swordClangSound.play();
+    }
+    else if(data.sound=="hurt"){
+        hurtSound.currentTime = 0;
+        hurtSound.play();
+    }
+    if(data.file){
+        var a = new Audio;
+        a.src = data.file;
+        a.volume = 0.2;
+        a.play();
+    }
+}
+
+
+function updateData(data){
+  players = data.playersArr;
+  for(var i=0;i<players.length;i++){
+    if(players[i].id == socket.id){
+      pInventory.inventory = players[i].inventory;
+      pInventory.equipment = players[i].equipment;
+      acceptedQuestIds = players[i].acceptedQuests;
+      playerHealth = players[i].health;
+      playerMaxHealth = players[i].maxHealth;
+      respawnTimer = players[i].respawnTimer;
+      monsters = data.monstersArr;
+      moveSpeed = players[i].moveSpeed;
+      projectiles = data.projectileArr;
+      break;
+    }
+  }
+  droppedItems = data.droppedItemsArr;
+}
+
+
+function updateMinuteData(data){
+    tpPoints = data.tpPointsArr;
+    NPCs = [];
+    for(var i=0;i<data.NPCsArr.length;i++){
+        NPCs.push(new QuestNPC(data.NPCsArr[i].id,data.NPCsArr[i].name,data.NPCsArr[i].x,data.NPCsArr[i].y,data.NPCsArr[i].skin));
+    }
+    tpLoadingImages = [];
+
+
+    for(var i=0;i<tpPoints.length;i++){
+        var Img = new Image();
+        Img.src = "img/loadingScreens/"+tpPoints[i].loadScreenImage;
+        tpLoadingImages.push(Img);
+    }
+}
+
+function drawTile(x,y,layer,n){
+    var tt;
+    //console.log("n "+n);
+    for(tt=0;tt<tilesets;tt++){
+        if(n<tilesetStartIds[tt]){
+            break;
+        }
+    }
+    tt--;
+    //console.log(tt);
+    if(tt==-1){
+        return;
+    }
+    
+    //console.log("i: "+i);
+    n-=tilesetStartIds[tt];
+    if(tt<0 || tt>tilesets){
+        console.log("Hiba: "+tt);
+    }
+    //console.log(n);
+    var tx = parseInt(n%tilesetDimensions[tt][0]);
+    var ty = parseInt(n/tilesetDimensions[tt][0]);
+    //console.log(tx+" "+ty);
+    //ctx.drawImage(tilesetPics[tt],tx*32,ty*32,32,32,parseInt(x*tileSize-viewportX),parseInt(y*tileSize-viewportY),tileSize,tileSize);
+    ctx.drawImage(tilesetPics[tt],tx*32,ty*32,32,32,parseInt(x*tileSize-viewportX),parseInt(y*tileSize-viewportY),tileSize,tileSize);
+}
+
+var currentPlayerAnimationFrame = 0;
+var currentPlayerAnimationFrameD = 1;
+var gameFrameCount = 0;
+function update(){
+    //Draw the tiles
+    //From viewpoint
+    //TODO: draw layers in correct order
+    //
+    ctx.fillStyle = "black";
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+    for(var i=0;i<layers;i++){
+        for(var y = 0;y<mapHeight;y++){
+            if(y<viewportY/tileSize-1 || y>viewportY/tileSize+HEIGHT/tileSize){
+                continue;
+            }
+            for(var x = 0;x<mapWidth;x++){  
+                if(x<viewportX/tileSize-1 || x>viewportX/tileSize+WIDTH/tileSize){
+                    continue;
+                }     
+                var ind = y*mapWidth+x;
+                //console.log(parseInt(layerContents[i][ind]));
+                drawTile(x,y,0,parseInt(layerContents[i][ind]));
+            }
+        }
+        //ctx.drawImage(tilesetPics[i],0,0);
+    }
+
+
+    
+    //Draw NPCs
+
+    for(var i=0;i<NPCs.length;i++){
+        NPCs[i].draw();
+        if(NPCs[i].checkPlayerCollision() == true){
+            ctx.drawImage(messageBubble, NPCs[i].x-viewportX-25,NPCs[i].y-viewportY-30);
+            //ctx.fillText("E to talk",NPCs[i].x-viewportX,NPCs[i].y-viewportY-30);
+            //drawDialogBox(NPCs[i].name,"Random szöveg");
+        }
+    }
+
+    //Draw infoboards popup
+    for(var i=0;i<infoBoards.length;i++){
+        if(infoBoards[i].checkPlayerCollision() == true){
+            ctx.drawImage(messageBubble, infoBoards[i].x-viewportX-25,infoBoards[i].y-viewportY-30);
+            //ctx.fillText("E to talk",NPCs[i].x-viewportX,NPCs[i].y-viewportY-30);
+            //drawDialogBox(NPCs[i].name,"Random szöveg");
+        }
+    }
+    //Draw teleport point name and popup
+    for(var i=0;i<tpPoints.length;i++){
+        ctx.font = "11px Arial";
+        ctx.strokeStyle = "black";
+        ctx.textAlign = "left";
+        ctx.lineWidth = 1;
+        ctx.strokeText(tpPoints[i].name,tpPoints[i].x-viewportX-ctx.measureText(tpPoints[i].name).width/2,tpPoints[i].y-viewportY)
+        ctx.fillStyle = "lime";
+        ctx.fillText(tpPoints[i].name,tpPoints[i].x-viewportX-ctx.measureText(tpPoints[i].name).width/2,tpPoints[i].y-viewportY);
+        if(checkPlayerCollisionWithTpPoint(tpPoints[i]) == true){
+            ctx.drawImage(messageBubble, tpPoints[i].x-viewportX-25,tpPoints[i].y-viewportY-30);
+            //ctx.fillText("E to talk",NPCs[i].x-viewportX,NPCs[i].y-viewportY-30);
+            //drawDialogBox(NPCs[i].name,"Random szöveg");
+        }
+    }
+
+
+
+    //Draw dropped items  
+    for(var i=0;i<droppedItems.length;i++){
+        if(droppedItems[i].x-viewportX+19<0 || droppedItems[i].x-viewportX>WIDTH || droppedItems[i].y-viewportY>HEIGHT || droppedItems[i].y-viewportY+19<0){continue;}
+        drawDroppedItem(droppedItems[i]);
+        if(checkPlayerCollisionWithDroppedItem(droppedItems[i])){
+            //if(pInventory.inventory.length<5){
+                //pickUpSound.play();
+            socket.emit("pickUpItem",{itemId:droppedItems[i].id, map:currentMap})
+        }
+    }
+    /*  
+    for(var i=0;i<droppedItems.length;i++){
+        droppedItems[i].draw();
+    }*/
+
+    //Draw Monsters
+
+    for(var i=0;i<monsters.length;i++){
+        var imgIndex = monsterFiles.indexOf(monsters[i].image);
+        if(imgIndex == -1){continue;}
+        
+        ctx.fillStyle = "black";
+        ctx.fillRect(monsters[i].x-viewportX-1,monsters[i].y-viewportY-11,monsters[i].w,8);
+        ctx.fillStyle = "red";
+        ctx.fillRect(monsters[i].x-viewportX,monsters[i].y-viewportY-10,monsters[i].health/monsters[i].maxHealth*monsters[i].w-2,6);
+
+        ctx.fillStyle = "white";
+        ctx.font = "8px verdana";
+        ctx.textAlign = "center";
+        ctx.fillText(monsters[i].health,monsters[i].x-viewportX+monsters[i].w/2-1,monsters[i].y-viewportY-4);
+
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.ellipse(monsters[i].x-viewportX+monsters[i].w/2,monsters[i].y-viewportY+monsters[i].h-5, monsters[i].w/2, 5, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.closePath();
+        ctx.drawImage(monsterImgs[imgIndex],(parseInt(gameFrameCount/20)%monsters[i].frames)*monsters[i].w,monsters[i].h*monsters[i].facing,monsters[i].w,monsters[i].h,monsters[i].x-viewportX,monsters[i].y-viewportY,monsters[i].w,monsters[i].h);
+
+    }
+
+
+    //Draw projectiles
+
+    for(var i=0;i<projectiles.length;i++){
+        drawProjectile(projectiles[i]);
+    }
+
+
+
+    //draw other players
+    for(var i=0;i<players.length;i++){
+          if(players[i].id == socket.id){continue;}
+            //STEP Sounds
+
+          if(players[i].x-viewportX+46<0 || players[i].x-viewportX-7>WIDTH || players[i].y-viewportY+37<0 || players[i].y-viewportY-30>HEIGHT){continue;}
+          if((players[i].moveDir[0]!=0 || players[i].moveDir[1] != 0) && gameFrameCount%20==(i*Math.floor(20/players.length)+3)%20){
+            var dist = (players[i].x-playerX)**2 + (players[i].y-playerY)**2;
+            if(dist<40000){
+                walkSound.volume = 0.3*(1-dist/40000);
+                walkSound.currentTime = 0;
+                walkSound.play();
+            }
+          }
+          
+          if(players[i].respawnTimer!=-1){
+              ctx.globalAlpha = 0.4;
+          }
+          ctx.beginPath();
+          ctx.fillStyle = "rgba(0,0,0,0.5)";
+          ctx.ellipse(players[i].x-viewportX+12, players[i].y-viewportY+34, 8, 5, 0, 0, Math.PI*2);
+          ctx.fill();
+          ctx.closePath();
+
+          ctx.save();
+          ctx.font = "10px verdana";
+          ctx.fillStyle = "brown";
+          ctx.textAlign = "center";
+          
+          ctx.fillText(players[i].name,players[i].x-viewportX+13,players[i].y-viewportY-14);
+          ctx.fillStyle = "orange";
+          ctx.fillText(players[i].name,players[i].x-viewportX+12,players[i].y-viewportY-15);
+          
+          ctx.fillStyle = "black";
+          ctx.fillRect(players[i].x-viewportX-8,players[i].y-viewportY-11,40,8);
+          ctx.fillStyle = "red";
+          ctx.fillRect(players[i].x-viewportX-7,players[i].y-viewportY-10,players[i].health/players[i].maxHealth*38,6);
+
+          ctx.fillStyle = "white";
+          ctx.font = "8px verdana";
+          ctx.fillText(players[i].health,players[i].x-viewportX+12,players[i].y-viewportY-4);
+          ctx.restore();
+          if(players[i].playerHitting>0){
+                if(moveDirection[1] == -1){ //UP
+                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*0,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                }
+                else if(moveDirection[1] == 1){ //DOWN
+                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*2,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                }
+                else if(moveDirection[0] == -1){ //LEFT
+                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*3,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                }
+                else if(moveDirection[0] == 1){ //RIGHT
+                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*1,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                }
+                else if(moveDirection[0] == 0 && moveDirection[1] == 0){
+                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*players[i].facing,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                }
+            }
+            else{
+                if(players[i].moveDir[1] == -1){ //UP
+                    ctx.drawImage(playerSkinImgs[players[i].skin],25*currentPlayerAnimationFrame,37*0,25,37,players[i].x-viewportX,players[i].y-viewportY,25,37);
+                }
+                else if(players[i].moveDir[1] == 1){ //DOWN
+                    ctx.drawImage(playerSkinImgs[players[i].skin],25*currentPlayerAnimationFrame,37*2,25,37,players[i].x-viewportX,players[i].y-viewportY,25,37);
+                }
+                else if(players[i].moveDir[0] == -1){ //LEFT
+                    ctx.drawImage(playerSkinImgs[players[i].skin],25*currentPlayerAnimationFrame,37*3,25,37,players[i].x-viewportX,players[i].y-viewportY,25,37);
+                }
+                else if(players[i].moveDir[0] == 1){ //RIGHT
+                    ctx.drawImage(playerSkinImgs[players[i].skin],25*currentPlayerAnimationFrame,37*1,25,37,players[i].x-viewportX,players[i].y-viewportY,25,37);
+                }
+                else if(players[i].moveDir[0] == 0 && players[i].moveDir[1] == 0){
+                    ctx.drawImage(playerSkinImgs[players[i].skin],25,37*players[i].facing,25,37,players[i].x-viewportX,players[i].y-viewportY,25,37);
+                }
+            }
+            ctx.globalAlpha = 1;
+    }
+
+    
+    //Draw player animation
+    if(gameFrameCount%10==0){
+        if(playerHitting>0){
+            playerHitting--;
+        }
+        currentPlayerAnimationFrame=(currentPlayerAnimationFrame+currentPlayerAnimationFrameD)%3; //3 frame length animation
+        if(currentPlayerAnimationFrame%3!=1){
+          currentPlayerAnimationFrameD*=-1;
+        }
+        
+    }
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.ellipse(playerX-viewportX+12, playerY-viewportY+34, 8, 5, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.closePath();
+    
+    if((moveDirection[0]!=0 || moveDirection[1] != 0) && gameFrameCount%20==0){
+        walkSound.volume = 0.3;
+        walkSound.currentTime = 0;
+        walkSound.play();
+        
+    }
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(playerX-viewportX-8,playerY-viewportY-15,40,8);
+    ctx.fillStyle = "red";
+    ctx.fillRect(playerX-viewportX-7,playerY-viewportY-14,playerHealth/playerMaxHealth*38,6);
+
+    ctx.fillStyle = "white";
+    ctx.font = "8px verdana";
+    ctx.textAlign = "center";
+    ctx.fillText(playerHealth,playerX-viewportX+12,playerY-viewportY-8);
+
+    if(playerHitting>0){
+        if(moveDirection[1] == -1){ //UP
+            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*0,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+        }
+        else if(moveDirection[1] == 1){ //DOWN
+            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*2,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+        }
+        else if(moveDirection[0] == -1){ //LEFT
+            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*3,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+        }
+        else if(moveDirection[0] == 1){ //RIGHT
+            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*1,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+        }
+        else if(moveDirection[0] == 0 && moveDirection[1] == 0){
+            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*playerFacing,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+        }
+    }
+    else if(playerCanMove){
+        if(moveDirection[1] == -1){ //UP
+            ctx.drawImage(playerSkinImgs[playerSkin],25*currentPlayerAnimationFrame,37*0,25,37,playerX-viewportX,playerY-viewportY,25,37);
+        }
+        else if(moveDirection[1] == 1){ //DOWN
+            ctx.drawImage(playerSkinImgs[playerSkin],25*currentPlayerAnimationFrame,37*2,25,37,playerX-viewportX,playerY-viewportY,25,37);
+        }
+        else if(moveDirection[0] == -1){ //LEFT
+            ctx.drawImage(playerSkinImgs[playerSkin],25*currentPlayerAnimationFrame,37*3,25,37,playerX-viewportX,playerY-viewportY,25,37);
+        }
+        else if(moveDirection[0] == 1){ //RIGHT
+            ctx.drawImage(playerSkinImgs[playerSkin],25*currentPlayerAnimationFrame,37*1,25,37,playerX-viewportX,playerY-viewportY,25,37);
+        }
+        else if(moveDirection[0] == 0 && moveDirection[1] == 0){
+            ctx.drawImage(playerSkinImgs[playerSkin],25,37*playerFacing,25,37,playerX-viewportX,playerY-viewportY,25,37);
+        }
+    }else{
+        ctx.drawImage(playerSkinImgs[playerSkin],25,37*0,25,37,playerX-viewportX,playerY-viewportY,25,37);
+    }
+
+
+
+    //Draw HUD
+    pInventory.drawHUD();
+    if(inDialogBox){
+            drawNewDialogBox(currentNPC.name);
+    }
+
+    //Draw damage particles 
+
+    for(var i=0;i<numberParticles.length;i++){
+        numberParticles[i].draw();
+        if(!numberParticles[i].update()){
+            numberParticles.splice(i,1);
+            i--;
+        }
+    }
+
+    //Draw map name
+    if(mapNameOpacity>0.5){
+        ctx.textAlign = "center";
+        ctx.font = "40px Arial";
+        ctx.fillStyle = "rgba(255,255,255,"+mapNameOpacity+")";
+        ctx.fillText(mapName,WIDTH/2,HEIGHT/4+mapNameOpacity*30);
+        mapNameOpacity-=0.02;
+    }
+
+    //Draw respawn screen
+    if(respawnTimer>-1){
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(0,0,WIDTH,HEIGHT);
+        ctx.fillStyle = "white";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Respawning in: "+parseInt(respawnTimer/60+1),WIDTH/2,HEIGHT/2-15);
+    }
+    //Draw currently accepted quests
+    if(acceptedQuestIds.length>0){
+      ctx.textAlign = "left";
+      ctx.drawImage(questsHeader, 20, HEIGHT/6);
+      ctx.save();
+
+      var grd = ctx.createLinearGradient(0, 0, 0, 200);
+      grd.addColorStop(0, "rgba(0,0,0,0.3)");
+      grd.addColorStop(0.9, "rgba(0,0,0,0.3)");
+      grd.addColorStop(1, "rgba(0,0,0,0)");
+      //ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.fillStyle = grd;
+      ctx.fillRect(21,HEIGHT/6+40,99,200);
+      
+      ctx.fillStyle = "white";
+      
+      var questTextHeight = 0;
+
+      for(var i=0;i<acceptedQuestIds.length;i++){
+        ctx.font = "9px Arial";
+        ctx.fillText(quests[acceptedQuestIds[i]].name, 25, questTextHeight+HEIGHT/6+55+i*20);
+        ctx.font = "9px Arial";
+        for(var j=0;j<quests[acceptedQuestIds[i]].requirementTexts.length;j++){
+          ctx.fillText(quests[acceptedQuestIds[i]].requirementTexts[j], 27, questTextHeight+HEIGHT/6+70+i*20+j*15);
+        }
+        questTextHeight+=j*15+10;
+        if(i!=acceptedQuestIds.length-1){
+          ctx.fillRect(50,questTextHeight+HEIGHT/6+55+i*20,40,1);
+        }
+      }
+      ctx.restore();
+
+    }
+
+    //Draw settings menu button
+    ctx.drawImage(settingsMenuImage,WIDTH-30,6);
+
+    
+
+
+    //Update Physics
+    if(playerCanMove){
+        var rightoffset = 0;
+        if(moveDirection[0]==1){
+            rightoffset=16;
+        }
+        var leftRightInd = (parseInt(playerY/tileSize)+1)*mapWidth+parseInt((playerX+rightoffset)/tileSize+moveDirection[0]*moveSpeed[0]/tileSize);
+        //if(moveDirection[0]==1){leftRightInd++;}
+        //
+        // TODO: Tidy up layers
+        //
+
+        var waterTiles = [164, 209, 210, 211];
+
+        if(layerContents[2][leftRightInd]!=0 || (waterTiles.includes(parseInt(layerContents[0][leftRightInd])) && layerContents[1][leftRightInd]==0)){
+            moveDirection[0] = 0;
+        }
+        var upDownInd = parseInt((playerY/tileSize+1)+moveDirection[1]*moveSpeed[1]/tileSize)*mapWidth+parseInt((playerX+16)/tileSize);
+        //if(moveDirection[1]==1){upDownInd++;}
+        if(layerContents[2][upDownInd]!=0 || (waterTiles.includes(parseInt(layerContents[0][upDownInd])) && layerContents[1][upDownInd]==0)){
+            moveDirection[1] = 0;
+        }
+        if(moveDirection[0]!=0 && moveDirection[1]!=0){
+            playerX+= moveDirection[0]*moveSpeed[0]*0.7;
+            playerY+= moveDirection[1]*moveSpeed[1]*0.7;
+        }else{
+            playerX+= moveDirection[0]*moveSpeed[0];
+            playerY+= moveDirection[1]*moveSpeed[1];
+        }
+        //update to server
+        socket.emit("playerPos",{x:playerX, y:playerY,moveDir:moveDirection,playerHit:playerHitting,facing:playerFacing, map:currentMap});
+    }
+    else{
+        moveDirection = [0,0];
+    }
+    viewportX = parseInt(playerX-WIDTH/2+12);
+    viewportY = parseInt(playerY-HEIGHT/2+18);
+    if(mapWidth<WIDTH/tileSize){
+        viewportX=-(WIDTH-mapWidth*tileSize)/2;//WIDTH/2+mapWidth/2;
+    }else{
+        if(viewportX<0){viewportX=0;}
+        if(viewportX>mapWidth*tileSize-WIDTH){viewportX=parseInt(mapWidth*tileSize-WIDTH);}
+    }
+    if(mapHeight<HEIGHT/tileSize){
+        viewportY=-(HEIGHT-mapHeight*tileSize)/2;
+    }else{
+        if(viewportY<0){viewportY=0;}
+        if(viewportY>mapHeight*tileSize-HEIGHT){viewportY=parseInt(mapHeight*tileSize-HEIGHT);}
+    }
+    
+    //Check if items were picked up
+    
+    /*
+    for(var i=0;i<droppedItems.length;i++){
+        if(checkPlayerCollisionWithDroppedItem(droppedItems[i])){
+            
+
+
+            //if(pInventory.inventory.length<5){
+                //pickUpSound.play();
+                socket.emit("pickUpItem",{itemId:droppedItems[i].id})
+
+                break;
+                
+                pInventory.slots.push(droppedItems[i].item);
+                droppedItems.splice(i,1);
+                i--;
+                
+            //}
+            
+        }
+    }
+    */
+
+
+
+    gameFrameCount++;
+    //clearInterval(gameloop);
+}
+
+function handleKeyDown(evt){
+    if(respawnTimer!=-1){
+        moveDirection[0]=0;
+        moveDirection[1]=0;
+        keysDown = [];
+        return;
+    }
+    if(evt.keyCode==65){moveDirection[0]=-1;playerFacing=3;if(keysDown.indexOf(65)==-1){keysDown.push(65);}} // Left
+    if(evt.keyCode==87){moveDirection[1]=-1;playerFacing=0;if(keysDown.indexOf(87)==-1){keysDown.push(87);}} // Up
+    if(evt.keyCode==68){moveDirection[0]=1;playerFacing=1;if(keysDown.indexOf(68)==-1){keysDown.push(68);}} // Right
+    if(evt.keyCode==83){moveDirection[1]=1;playerFacing=2;if(keysDown.indexOf(83)==-1){keysDown.push(83);}} // Down
+    if(evt.keyCode==80){console.log("Position: "+playerX+", "+playerY);} //P key
+    //console.log(evt.keyCode);
+
+    
+    if(inDialogBox==true){
+        if(customDialog){
+            if(evt.keyCode == 13){ //return key
+                //dialog box dismissed
+                console.log("finished");
+                currentNPCPage=0;
+                playerCanMove = true;
+                inDialogBox = false;
+                customDialog = false;
+                
+            }
+            if(evt.keyCode == 32){
+                if(currentNPCPage*4+4<dialogBoxText.length){
+                    currentNPCPage++;
+                    dialogBubbleSound.play();
+                }
+            }
+            return;
+        }
+        if(evt.keyCode == 32){//space key
+
+            //By QuestID
+            if(currentNPCPage*4+4<dialogBoxText.length){
+                
+                
+                //dialogBoxText = currentNPC.currentQuest.text.slice(currentNPCPage*4,currentNPCPage*4+4);
+                
+                currentNPCPage++;
+                dialogBubbleSound.play();
+            }
+
+
+
+            /*
+            if(currentNPC.questFinished){
+                if(currentNPC.quests[currentNPC.currentQuest].text.length>(currentNPC.quests[currentNPC.currentQuest].questCurrentPage+1)*4){
+                    currentNPC.quests[currentNPC.currentQuest].questCurrentPage++;
+                }else{
+                    questLastPage = true;
+                }
+            }else{
+                playerCanMove = true;
+                inDialogBox = false;
+            }*/
+        }
+        //if(currentNPCPage==currentNPC.currentQuest.text.length/4){
+            if(evt.keyCode == 13){ //return key
+                //Quest accepted
+                console.log("accepted");
+                //currentPlayerQuests.push(currentNPC.quests[currentNPC.currentQuest]);
+                currentNPC.questFinished = false;
+                //questLastPage = false;
+                //currentNPC.quests[currentNPC.currentQuest].questCurrentPage=0;
+                currentNPCPage=0;
+                playerCanMove = true;
+                inDialogBox = false;
+                missionAcceptedSound.play();
+                socket.emit("acceptQuest",{questId: currentNPC.currentQuest.id, map:currentMap});
+            }
+            if(evt.keyCode == 8){ //backspace key
+                //Quest declined
+                //questLastPage = false;
+                currentNPCPage=0;
+                //currentNPC.quests[currentNPC.currentQuest].questCurrentPage=0;
+                playerCanMove = true;
+                inDialogBox = false;
+            }
+        //}
+    }
+    else{
+        if(evt.keyCode == 32){
+            if(playerHitting==0 && pInventory.equipment[0] != null){
+                playerHitting = 3;
+                swordWhooshSound.currentTime = 0;
+                swordWhooshSound.play();
+                socket.emit("attack",{direction:playerFacing, map:currentMap});
+            }
+        }
+    }
+    if(evt.keyCode==69){ //E key
+        for(var i=0;i<NPCs.length;i++){
+            if(NPCs[i].checkPlayerCollision() == true){
+            
+
+            socket.emit("checkQuest",{NPCId:NPCs[i].id,questId:NPCs[i].currentQuest.id,map:currentMap});
+            currentNPC = NPCs[i];
+            return;
+
+
+            
+            }
+        }
+        for(var i=0;i<infoBoards.length;i++){
+            if(infoBoards[i].checkPlayerCollision() == true){
+                playerCanMove = false;
+                inDialogBox = true;
+                customDialog = true;
+                dialogBubbleSound.play();
+                currentNPC ={name: "info", currentQuest:0};
+                dialogBoxText = infoBoards[i].text;
+                return;
+            }
+        }
+        for(var i=0;i<tpPoints.length;i++){
+            if(checkPlayerCollisionWithTpPoint(tpPoints[i]) == true){
+                // Replace with sail sound
+                dialogBubbleSound.play();
+                changeToMap(tpPoints[i]);
+                return;
+            }
+        }
+    }
+    if(evt.keyCode==81){ //Q key
+        if(inventoryOpen){
+            if(pInventory.highlightedItem>-1){
+                socket.emit("dropItem",{place:"inventory", index:pInventory.highlightedItem, dropAll:evt.ctrlKey, map:currentMap});
+            }
+            else if(pInventory.highlightedEquipment>-1){
+                socket.emit("dropItem",{place:"equipment", index:pInventory.highlightedEquipment, dropAll:evt.ctrlKey, map:currentMap});
+            }
+        }
+        
+    }
+    if(evt.keyCode == 73){ // I key, inventory
+        inventoryOpen = !inventoryOpen;
+    }
+}
+
+function handleKeyUp(evt){
+    //TODO
+    //If page loses focus keeps moving bug
+    //
+    if(respawnTimer!=-1){
+        moveDirection[0]=0;
+        moveDirection[1]=0;
+        keysDown = [];
+        return;
+    }
+    if(evt.keyCode==65){// Left
+        keysDown.splice(keysDown.indexOf(65),1);
+        if(keysDown.indexOf(68)>-1){moveDirection[0]=1;playerFacing=1;return;}
+        moveDirection[0]=0;
+    } 
+    else if(evt.keyCode==87){// Up
+        keysDown.splice(keysDown.indexOf(87),1);
+        if(keysDown.indexOf(83)>-1){moveDirection[1]=1;playerFacing=2;return;}
+        moveDirection[1]=0;
+    } 
+    else if(evt.keyCode==68){// Right
+        keysDown.splice(keysDown.indexOf(68),1);
+        if(keysDown.indexOf(65)>-1){moveDirection[0]=-1;playerFacing=3;return;}
+        moveDirection[0]=0;
+    } 
+    else if(evt.keyCode==83){// Down
+        keysDown.splice(keysDown.indexOf(83),1);
+        if(keysDown.indexOf(87)>-1){moveDirection[1]=-1;playerFacing=0;return;}
+        moveDirection[1]=0;
+    } 
+    //console.log(evt.keyCode);
+
+    if(evt.keyCode<54 && evt.keyCode>48){
+        if(pInventory.inventory[evt.keyCode-49]!=null){
+            socket.emit("tryUse",{place:"inventory", index:evt.keyCode-49,map:currentMap});
+        }
+
+    }
+}
+
+
+function checkQuest(data){
+  dialogBubbleSound.play();
+  if(data.notAccepted == true){
+      console.log("I shouldn't run.. there is a problem");
+      inDialogBox = true;
+      playerCanMove = false;
+      return;
+  }
+
+  if(data.offer==true){
+    inDialogBox = true;
+    playerCanMove = false;
+    for(var i=0;i<quests.length;i++){
+        if(quests[i].id == data.questId){
+            currentNPC.currentQuest = quests[i];
+            break;
+        }
+    }
+    console.log("Viewing an offered quest");
+    currentNPCPage = 0;
+    customDialog = false;
+    dialogBoxText = currentNPC.currentQuest.text;
+    currentNPCPage=0;
+    return;
+  }
+
+  if(data.successful){
+    //Mission complete
+    inDialogBox = true;
+    playerCanMove = false;
+    dialogBoxText = data.answer;
+    customDialog = true;
+    currentNPCPage=0;
+    missionCompleteSound.play();
+  }
+  else{
+    inDialogBox = true;
+    playerCanMove = false;
+    dialogBoxText = data.answer;
+    customDialog = true;
+    currentNPCPage=0;
+  }
+
+}
+
+
+
+function mouseDown(evt){
+    if(mouseX>WIDTH-30 && mouseY<30){
+        toggleMusic();
+        return;
+    }
+    if(inventoryOpen){
+        if(mouseY>HEIGHT-128 && mouseX>5*WIDTH/6-80 && mouseX<5*WIDTH/6-80+160){
+            var x = parseInt((mouseX-5*WIDTH/6+80)/32);
+            var y = parseInt((mouseY-HEIGHT+128)/32);
+            var ind = y*5+x;
+            if(pInventory.inventory[ind]){
+                pInventory.highlightedItem = ind;
+                pInventory.highlightedEquipment = -1;
+            }else{
+                pInventory.highlightedItem = -1;
+                pInventory.highlightedEquipment = -1;
+            }
+        }
+        if(mouseX>5*WIDTH/6+80 && mouseX<5*WIDTH/6+112){
+            if(mouseY>HEIGHT-28){
+                //On 4rd slot
+                if(pInventory.equipment[3]){
+                    pInventory.highlightedItem = -1;
+                    pInventory.highlightedEquipment = 3;
+                }
+            }
+            else if(mouseY>HEIGHT-56){
+                //On 3nd slot
+                if(pInventory.equipment[2]){
+                    pInventory.highlightedItem = -1;
+                    pInventory.highlightedEquipment = 2;
+                }
+
+            }else if(mouseY>HEIGHT-90){
+                //On 2st slot
+                if(pInventory.equipment[1]){
+                    pInventory.highlightedItem = -1;
+                    pInventory.highlightedEquipment = 1;
+                }
+            }else if(mouseY>HEIGHT-130){
+                //On 1st slot
+                if(pInventory.equipment[0]){
+                    pInventory.highlightedItem = -1;
+                    pInventory.highlightedEquipment = 0;
+                }
+            }
+        }
+    }
+}
+
+function mouseMove(evt){
+    canvas.style.cursor = "default";
+    mouseX = parseInt(evt.clientX/(scaleSize/tileSize));
+    mouseY = parseInt(evt.clientY/(scaleSize/tileSize));
+    if(inventoryOpen){
+        if(mouseY>HEIGHT-128 && mouseX>5*WIDTH/6-80 && mouseX<5*WIDTH/6-80+160){
+            canvas.style.cursor = "pointer";
+        }
+        else if(mouseX>5*WIDTH/6+80 && mouseX<5*WIDTH/6+112 && mouseY>HEIGHT-130){
+            canvas.style.cursor = "pointer";
+        }
+    }
+
+    //console.log(mouseX+", "+mouseY);
+}
+
+function mouseUp(evt){
+    
+}
+function mouseDoubleClick(evt){
+    if(inventoryOpen){
+        if(mouseY>HEIGHT-128 && mouseX>5*WIDTH/6-80 && mouseX<5*WIDTH/6-80+160){
+            var x = parseInt((mouseX-5*WIDTH/6+80)/32);
+            var y = parseInt((mouseY-HEIGHT+128)/32);
+            var ind = y*5+x;
+            if(pInventory.inventory[ind]){
+                socket.emit("tryUse",{place:"inventory", index:ind, map:currentMap});
+            }
+        }
+        if(mouseX>5*WIDTH/6+80 && mouseX<5*WIDTH/6+112){
+            if(mouseY>HEIGHT-28){
+                //On 4rd slot
+                socket.emit("tryUse",{place:"equipment", index:3, map:currentMap});
+                console.log("tried using slot: 3");
+            }
+            else if(mouseY>HEIGHT-56){
+                //On 3rd slot
+                socket.emit("tryUse",{place:"equipment", index:2, map:currentMap});
+                console.log("tried using slot: 2");
+            }
+            else if(mouseY>HEIGHT-90){
+                //On 2nd slot
+                socket.emit("tryUse",{place:"equipment", index:1, map:currentMap});
+                console.log("tried using slot: 1");
+
+            }else if(mouseY>HEIGHT-120){
+                //On 1st slot
+                socket.emit("tryUse",{place:"equipment", index:0, map:currentMap});
+                console.log("tried using slot: 0");
+            }
+        }
+    }
+}
+
+document.addEventListener("keydown",handleKeyDown);
+document.addEventListener("keyup",handleKeyUp);
+canvas.addEventListener("mousedown",mouseDown);
+canvas.addEventListener("mousemove",mouseMove);
+canvas.addEventListener("mouseup",mouseUp);
+canvas.addEventListener("dblclick",mouseDoubleClick);
+
+    </script>
+    </body>
+</html>

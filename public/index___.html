@@ -1,0 +1,58 @@
+<html>
+<head>
+<style>
+    *{margin:0;padding:0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
+</head>
+<body>
+
+<canvas id="playCanvas">Your browser doesn't support the HTML5 canvas</canvas>
+
+<script>
+
+var socket = io.connect("http://localhost:3000");
+
+var canvas = document.getElementById("playCanvas");
+var ctx = canvas.getContext("2d");
+
+var width = canvas.width = window.innerWidth;
+var height = canvas.height = window.innerHeight;
+
+//LOAD MAP
+
+var map;
+
+function loadDoc() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+     //console.log(xhttp.response);
+     
+    var parser = new DOMParser();
+    map = parser.parseFromString(xhttp.response,"text/xml");
+    console.log(map);
+    }
+  };
+  xhttp.open("GET", "tiled/map1.tmx", true);
+  xhttp.send();
+  
+}
+
+
+function update(){
+    
+
+
+
+
+
+}
+
+
+var gameloop = setInterval(update,1000/30);
+
+</script>
+
+</body>
+</html>
