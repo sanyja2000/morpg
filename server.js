@@ -12,7 +12,7 @@ var maps = [{id:0,name:"Magington city",file:"map1.tmx",tpPoints:[
   {x:713,y:780,name:"Go into your house",loadScreenImage:"magington_load.png",mapName:"Your House",toMap:2,spawnX:320,spawnY:550}]  },
 
   {id:1,name:"Underworld",file:"underworld.tmx",tpPoints:[{x:65,y:63,name:"Awake in the real world", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130},
-  {x:1060,y:160,name:"Into the scary dungeon", toMap:3, loadScreenImage:"underworld_load.png",mapName:"Scary dungeon",spawnX:0,spawnY:0}]},
+  {x:1070,y:160,name:"Enter the scary dungeon", toMap:3, loadScreenImage:"underworld_load.png",mapName:"Scary dungeon",spawnX:0,spawnY:0}]},
 
   {id:2,name:"Your house",file:"house1.tmx",tpPoints:[{x:320,y:560,name:"Go outside", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130}]},
 
