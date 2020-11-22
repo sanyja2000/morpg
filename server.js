@@ -11,10 +11,24 @@ var maps = [{id:0,name:"Magington city",file:"map1.tmx",tpPoints:[
   {x:60,y:730,name:"Sail to the underworld",toMap:1, loadScreenImage:"underworld_load.png",mapName:"The Underworld",spawnX:130,spawnY:130},
   {x:713,y:780,name:"Go into your house",loadScreenImage:"magington_load.png",mapName:"Your House",toMap:2,spawnX:320,spawnY:550}]  },
 
-  {id:1,name:"Underworld",file:"underworld.tmx",tpPoints:[{x:65,y:63,name:"Awake in the real world", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130}]},
+  {id:1,name:"Underworld",file:"underworld.tmx",tpPoints:[{x:65,y:63,name:"Awake in the real world", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130},
+  {x:1060,y:160,name:"Into the scary dungeon", toMap:3, loadScreenImage:"underworld_load.png",mapName:"Scary dungeon",spawnX:0,spawnY:0}]},
 
-  {id:2,name:"Your house",file:"house1.tmx",tpPoints:[{x:320,y:560,name:"Go outside", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130}]}]; //Storage for EVERYTHING
+  {id:2,name:"Your house",file:"house1.tmx",tpPoints:[{x:320,y:560,name:"Go outside", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130}]},
 
+  {id:3,name:"Scary dungeon",file:"dungeon1.tmx",tpPoints:[]}
+]; //Storage for EVERYTHING
+
+
+for(var i=0;i<maps.length;i++){
+  //initalize default map lists
+  maps[i].NPCs = [];
+  maps[i].NPCsClientSide = [];
+  maps[i].monsters = [];
+  maps[i].projectiles = [];
+  maps[i].players = [];
+  maps[i].droppedItems = [];
+}
 
 maps[0].NPCs = [
   {id:0,name:"Orvald",quests:[0,2,4]},
@@ -28,8 +42,7 @@ maps[0].NPCsClientSide = [
 maps[1].NPCs = [{id:4,name:"Reaper",quests:[5],questInteractions:[{questId:4,text:["Well, well, well","Who do we got here?","Did Orvald send you?","That little smug..","He probably needs skulls again","Here, give him some","These are fresh harvest"],items:[{name:"skull",pieces:3,equipment:false,iconNumber:195}],itemsGivenToPlayers:[]}]},
 ];
 maps[1].NPCsClientSide = [{id:4,name:"Reaper",x:646,y:980,skin:5}];
-maps[2].NPCs = [];
-maps[2].NPCsClientSide = [];
+
 
 maps[0].monsters = [
   {id:0, name:"Ivern",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:5000,image:"img/pumpkivern.png",w:30,h:60,frames:10,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"pumpkin",pieces:1,iconNumber:19,equipment:false}],target:null,attackDmg:20,health:200,maxHealth:200}
@@ -45,17 +58,6 @@ maps[1].monsters = [
 
 //TODO create basic 1-2 man test dungeon on map + enemies
 
-maps[2].monsters = [];
-
-maps[0].projectiles = [];
-maps[1].projectiles = [];
-maps[2].projectiles = [];
-
-
-maps[0].players = [];
-maps[1].players = [];
-maps[2].players = [];
-
 
 maps[0].droppedItems = [
 /*
@@ -66,9 +68,6 @@ maps[0].droppedItems = [
 {id:itemIds++,x:1174,y:64,equipment:true,iconNumber:10,slotNumber:3,description:["Move Speed +20"],moveSpeed:20,name:"gotta go fast",pieces:2}
 
 ];
-maps[1].droppedItems = [];
-maps[2].droppedItems = [];
-
 
 var quests = [
   {id:0,name:"Welcome to the island",
