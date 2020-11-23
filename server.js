@@ -12,7 +12,7 @@ var maps = [{id:0,name:"Magington city",file:"map1.tmx",tpPoints:[
   {x:713,y:780,name:"Go into your house",loadScreenImage:"magington_load.png",mapName:"Your House",toMap:2,spawnX:320,spawnY:550}]  },
 
   {id:1,name:"Underworld",file:"underworld.tmx",tpPoints:[{x:65,y:63,name:"Awake in the real world", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130},
-  {x:1070,y:160,name:"Enter the scary dungeon", toMap:3, loadScreenImage:"underworld_load.png",mapName:"Scary dungeon",spawnX:0,spawnY:0}]},
+  {x:1070,y:160,name:"Enter the scary dungeon", toMap:3, loadScreenImage:"underworld_load.png",mapName:"Scary dungeon",spawnX:96,spawnY:192}]},
 
   {id:2,name:"Your house",file:"house1.tmx",tpPoints:[{x:320,y:560,name:"Go outside", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130}]},
 
@@ -28,6 +28,8 @@ for(var i=0;i<maps.length;i++){
   maps[i].projectiles = [];
   maps[i].players = [];
   maps[i].droppedItems = [];
+  maps[i].doors = [];
+  maps[i].chests = [];
 }
 
 maps[0].NPCs = [
@@ -43,6 +45,7 @@ maps[1].NPCs = [{id:4,name:"Reaper",quests:[5],questInteractions:[{questId:4,tex
 ];
 maps[1].NPCsClientSide = [{id:4,name:"Reaper",x:646,y:980,skin:5}];
 
+maps[3].doors = [{id:0, x:1024 ,y:544 ,imageIndex:0, isOpen:true, key:{name:"key",pieces:1,equipment:false,iconNumber:70}}];
 
 maps[0].monsters = [
   {id:0, name:"Ivern",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:5000,image:"img/pumpkivern.png",w:30,h:60,frames:10,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"pumpkin",pieces:1,iconNumber:19,equipment:false}],target:null,attackDmg:20,health:200,maxHealth:200}
@@ -56,8 +59,11 @@ maps[1].monsters = [
   {id:4, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1350, y:900,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:4,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
 ];
 
-//TODO create basic 1-2 man test dungeon on map + enemies
-
+// TODO create basic 1-2 man test dungeon on map + enemies
+// TODO add loot chests to maps
+// TODO add doors important!
+// 
+// TODO add chat?
 
 maps[0].droppedItems = [
 /*
@@ -310,7 +316,7 @@ function playerUpdate(){
         players[i].respawnTimer--;
         //continue;
       }
-      io.to(players[i].id).emit("updateData",{playersArr:players,droppedItemsArr:maps[h].droppedItems,monstersArr:maps[h].monsters,projectileArr:maps[h].projectiles});
+      io.to(players[i].id).emit("updateData",{playersArr:players,droppedItemsArr:maps[h].droppedItems,monstersArr:maps[h].monsters,projectileArr:maps[h].projectiles,doorsArr:maps[h].doors});
     }
   }
   /*

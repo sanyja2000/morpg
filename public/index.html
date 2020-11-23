@@ -144,6 +144,11 @@ questsHeader.src = "img/quests_b.png";
 
 var settingsMenuImage = new Image();
 settingsMenuImage.src = "img/settingsMenu.png";
+
+var doorsImage = new Image();
+doorsImage.src = "img/doors.png";
+
+
 //TODO play map specific music
 
 var backgroundMusicFiles = ["sound/music/ES_Red_Star.mp3"];
@@ -225,6 +230,9 @@ var monsters = [];
 var monsterFiles = ["img/ghost.png","img/pumpkivern.png"];
 var monsterImgs = [];
 
+
+var doors = [];
+
 for(var i=0;i<monsterFiles.length;i++){
     var mImg = new Image();
     mImg.src = monsterFiles[i];
@@ -287,6 +295,17 @@ function drawProjectile(projectile){
     ctx.drawImage(projectileImg,14*projectile.color,0,14,14,projectile.x-viewportX,projectile.y-viewportY,14,14);
 }
 
+function drawDoor(door){
+    ctx.drawImage(doorsImage,64*door.imageIndex,64*door.isOpen,64,64,door.x-viewportX,door.y-viewportY,64,64);
+}
+
+function checkPlayerCollisionWithDoor(door){
+    if((door.x-playerX)**2+(door.y-playerY)**2<400){
+        return true;
+    }
+    return false;
+}
+
 
 function numberParticle(text,x,y,color){
     this.x = x;
@@ -336,14 +355,16 @@ function changeToMap(tpPoint){
     ctx.font = "15px Arial";
     ctx.fillText("Loading...",WIDTH/6,HEIGHT/2+25);
     socket.emit("changeToMap",{from:currentMap,to:tpPoint.toMap});
+    currentMap = tpPoint.toMap;
     if(tpPoint.toMap==1){
-        currentMap = tpPoint.toMap;
+        
         x.open("GET", "http://"+window.location.hostname+":80/tiled/underworld.tmx", true);
     }else if(tpPoint.toMap==2){
-        currentMap = tpPoint.toMap;
         x.open("GET", "http://"+window.location.hostname+":80/tiled/house1.tmx", true);
-    }else{
-        currentMap = tpPoint.toMap;
+    }else if(tpPoint.toMap==3){
+        x.open("GET", "http://"+window.location.hostname+":80/tiled/dungeon1.tmx", true);
+    }
+    else{
         x.open("GET", "http://"+window.location.hostname+":80/tiled/map1.tmx", true);
     }
     playerX = tpPoint.spawnX;
@@ -528,6 +549,7 @@ function updateData(data){
       monsters = data.monstersArr;
       moveSpeed = players[i].moveSpeed;
       projectiles = data.projectileArr;
+      doors = data.doorsArr;
       break;
     }
   }
@@ -684,6 +706,14 @@ function update(){
 
     }
 
+
+    //Draw doors
+    for(var i=0;i<doors.length;i++){
+        drawDoor(doors[i]);
+        if(doors[i].isOpen == false && checkPlayerCollisionWithDoor(doors[i])){
+            ctx.drawImage(messageBubble, playerX-viewportX-25,playerY-viewportY-30);
+        }
+    }
 
     //Draw projectiles
 
@@ -955,6 +985,8 @@ function update(){
     else{
         moveDirection = [0,0];
     }
+
+    //Move camera
     viewportX = parseInt(playerX-WIDTH/2+12);
     viewportY = parseInt(playerY-HEIGHT/2+18);
     if(mapWidth<WIDTH/tileSize){
@@ -970,32 +1002,6 @@ function update(){
         if(viewportY>mapHeight*tileSize-HEIGHT){viewportY=parseInt(mapHeight*tileSize-HEIGHT);}
     }
     
-    //Check if items were picked up
-    
-    /*
-    for(var i=0;i<droppedItems.length;i++){
-        if(checkPlayerCollisionWithDroppedItem(droppedItems[i])){
-            
-
-
-            //if(pInventory.inventory.length<5){
-                //pickUpSound.play();
-                socket.emit("pickUpItem",{itemId:droppedItems[i].id})
-
-                break;
-                
-                pInventory.slots.push(droppedItems[i].item);
-                droppedItems.splice(i,1);
-                i--;
-                
-            //}
-            
-        }
-    }
-    */
-
-
-
     gameFrameCount++;
     //clearInterval(gameloop);
 }
