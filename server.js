@@ -16,7 +16,7 @@ var maps = [{id:0,name:"Magington city",file:"map1.tmx",tpPoints:[
 
   {id:2,name:"Your house",file:"house1.tmx",tpPoints:[{x:320,y:560,name:"Go outside", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130}]},
 
-  {id:3,name:"Scary dungeon",file:"dungeon1.tmx",tpPoints:[]}
+  {id:3,name:"Scary dungeon",file:"dungeon1.tmx",tpPoints:[{x:1455,y:730,name:"Escape",toMap:1,loadScreenImage:"underworld_load.png",mapName:"The Underworld",spawnX:1792,spawnY:109}]}
 ]; //Storage for EVERYTHING
 
 
@@ -45,7 +45,17 @@ maps[1].NPCs = [{id:4,name:"Reaper",quests:[5],questInteractions:[{questId:4,tex
 ];
 maps[1].NPCsClientSide = [{id:4,name:"Reaper",x:646,y:980,skin:5}];
 
-maps[3].doors = [{id:0, x:1024 ,y:544 ,imageIndex:0, isOpen:true, key:{name:"key",pieces:1,equipment:false,iconNumber:70}}];
+maps[3].doors = [{id:0, x:1024 ,y:544 ,imageIndex:0, isOpen:false, key:{name:"key",pieces:1,equipment:false,iconNumber:70}}];
+
+maps[3].monsters = [
+  {id:0, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:288, y:352,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:1, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:192, y:704,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"another key",pieces:1,iconNumber:71,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}
+  /*{id:2, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:640, y:736,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:3, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:768, y:512,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:4, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:608, y:288,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:5, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1216, y:160,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:6, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1248, y:416,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}*/
+];
 
 maps[0].monsters = [
   {id:0, name:"Ivern",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:5000,image:"img/pumpkivern.png",w:30,h:60,frames:10,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"pumpkin",pieces:1,iconNumber:19,equipment:false}],target:null,attackDmg:20,health:200,maxHealth:200}
@@ -61,7 +71,7 @@ maps[1].monsters = [
 
 // TODO create basic 1-2 man test dungeon on map + enemies
 // TODO add loot chests to maps
-// TODO add doors important!
+// TODO reset dungeons if everyone escapes?
 // 
 // TODO add chat?
 
@@ -123,9 +133,6 @@ function seePlayers() {
   console.log(maps[0]);
 }
 
-// !!!!
-//TODO: changeMapTo change player from map
-//
 function dropItem(_x,_y,item,map){
 
   var droppingItem = {x:_x,y:_y,id:itemIds++};
@@ -1067,6 +1074,60 @@ function newConnection(socket){
     monsters = maps[data.map].monsters;
     var tears = 1+Math.floor(Math.random()*2);
     monsters.push(Object.assign({},{id:itemIds++, name:"Scary ghost",facing:1,detectRange:40000,abandonRange:160000,attackRange:1000,image:"img/ghost.png",w:45,h:50,frames:6,x:data.x, y:data.y,moveSpeed:1.6,attackSpeed:1.2,loot:[{id:itemIds++,name:"ghasttear",pieces:tears,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}));
+  }
+  socket.on("open",open);
+  function open(data){
+    //Collector for opening doors, chests
+    if(data.type=="door"){
+      var currentDoor = null;
+      for(var i=0;i<maps[data.map].doors.length;i++){
+        if(maps[data.map].doors[i].id == data.doorId){
+          currentDoor = maps[data.map].doors[i];
+        }
+      }
+      if(currentDoor==null){
+        return;
+      }
+      if(currentDoor.isOpen){
+        return;
+      }
+      //Check if key in player's inventory
+      for(var i=0;i<maps[data.map].players.length;i++){
+        if(maps[data.map].players[i].id == socket.id){
+          
+          for(var j=0;j<maps[data.map].players[i].inventory.length;j++){
+            if(maps[data.map].players[i].inventory[j]==null){
+              //Inventory slot is null
+              continue;
+            }
+            if(maps[data.map].players[i].inventory[j].name == currentDoor.key.name){
+              //We found the key
+              //TODO consider keyIDs, rather than names
+              //Remove it from the inventory
+              
+              maps[data.map].players[i].inventory[j]=null;
+
+              //And open the door
+              currentDoor.isOpen = true;
+              socket.emit("sounds",{file:"sound/openDoor.wav"});
+              return;
+            }
+
+          }
+
+          //We didn't found the key in the players inventory
+          //Add particle for not opening?
+          //temporarily:
+          socket.emit("damageParticle",{as:"victim",type:"physical",damage:"Couldn't find key"});
+          //TODO add locked sound
+          
+
+          return;
+        }
+      }
+      
+    }
+
   }
   socket.on("disconnect",disconnected);
   function disconnected(data){

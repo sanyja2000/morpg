@@ -300,7 +300,7 @@ function drawDoor(door){
 }
 
 function checkPlayerCollisionWithDoor(door){
-    if((door.x-playerX)**2+(door.y-playerY)**2<400){
+    if((door.x+20-playerX)**2+(door.y-playerY)**2<1600){
         return true;
     }
     return false;
@@ -606,8 +606,6 @@ var gameFrameCount = 0;
 function update(){
     //Draw the tiles
     //From viewpoint
-    //TODO: draw layers in correct order
-    //
     ctx.fillStyle = "black";
     ctx.fillRect(0,0,WIDTH,HEIGHT);
     for(var i=0;i<layers;i++){
@@ -959,19 +957,33 @@ function update(){
         var leftRightInd = (parseInt(playerY/tileSize)+1)*mapWidth+parseInt((playerX+rightoffset)/tileSize+moveDirection[0]*moveSpeed[0]/tileSize);
         //if(moveDirection[0]==1){leftRightInd++;}
         //
-        // TODO: Tidy up layers
+        // TODO: Tidy up layers!!! water tiles into collision layer
         //
 
-        var waterTiles = [164, 209, 210, 211];
+        var waterTiles = [164, 209, 210, 211];  //Get rid of this mess
 
         if(layerContents[2][leftRightInd]!=0 || (waterTiles.includes(parseInt(layerContents[0][leftRightInd])) && layerContents[1][leftRightInd]==0)){
             moveDirection[0] = 0;
         }
+
         var upDownInd = parseInt((playerY/tileSize+1)+moveDirection[1]*moveSpeed[1]/tileSize)*mapWidth+parseInt((playerX+16)/tileSize);
         //if(moveDirection[1]==1){upDownInd++;}
         if(layerContents[2][upDownInd]!=0 || (waterTiles.includes(parseInt(layerContents[0][upDownInd])) && layerContents[1][upDownInd]==0)){
             moveDirection[1] = 0;
         }
+
+
+        //Check collision with doors
+        for(var i=0;i<doors.length;i++){
+            if(!doors[i].isOpen){
+                console.log(parseInt(upDownInd/mapWidth)*32);
+                if(parseInt(upDownInd/mapWidth)*32>=doors[i].y && parseInt(upDownInd/mapWidth)*32<=doors[i].y+32 && playerX>doors[i].x && playerX<doors[i].x+64){
+                    moveDirection[1] = 0;
+                }
+            }
+        }
+        //Add collision to the sides too
+
         if(moveDirection[0]!=0 && moveDirection[1]!=0){
             playerX+= moveDirection[0]*moveSpeed[0]*0.7;
             playerY+= moveDirection[1]*moveSpeed[1]*0.7;
@@ -1001,7 +1013,7 @@ function update(){
         if(viewportY<0){viewportY=0;}
         if(viewportY>mapHeight*tileSize-HEIGHT){viewportY=parseInt(mapHeight*tileSize-HEIGHT);}
     }
-    
+
     gameFrameCount++;
     //clearInterval(gameloop);
 }
@@ -1052,43 +1064,28 @@ function handleKeyDown(evt){
                 dialogBubbleSound.play();
             }
 
-
-
-            /*
-            if(currentNPC.questFinished){
-                if(currentNPC.quests[currentNPC.currentQuest].text.length>(currentNPC.quests[currentNPC.currentQuest].questCurrentPage+1)*4){
-                    currentNPC.quests[currentNPC.currentQuest].questCurrentPage++;
-                }else{
-                    questLastPage = true;
-                }
-            }else{
-                playerCanMove = true;
-                inDialogBox = false;
-            }*/
         }
-        //if(currentNPCPage==currentNPC.currentQuest.text.length/4){
-            if(evt.keyCode == 13){ //return key
-                //Quest accepted
-                console.log("accepted");
-                //currentPlayerQuests.push(currentNPC.quests[currentNPC.currentQuest]);
-                currentNPC.questFinished = false;
-                //questLastPage = false;
-                //currentNPC.quests[currentNPC.currentQuest].questCurrentPage=0;
-                currentNPCPage=0;
-                playerCanMove = true;
-                inDialogBox = false;
-                missionAcceptedSound.play();
-                socket.emit("acceptQuest",{questId: currentNPC.currentQuest.id, map:currentMap});
-            }
-            if(evt.keyCode == 8){ //backspace key
-                //Quest declined
-                //questLastPage = false;
-                currentNPCPage=0;
-                //currentNPC.quests[currentNPC.currentQuest].questCurrentPage=0;
-                playerCanMove = true;
-                inDialogBox = false;
-            }
-        //}
+        if(evt.keyCode == 13){ //return key
+            //Quest accepted
+            console.log("accepted");
+            //currentPlayerQuests.push(currentNPC.quests[currentNPC.currentQuest]);
+            currentNPC.questFinished = false;
+            //questLastPage = false;
+            //currentNPC.quests[currentNPC.currentQuest].questCurrentPage=0;
+            currentNPCPage=0;
+            playerCanMove = true;
+            inDialogBox = false;
+            missionAcceptedSound.play();
+            socket.emit("acceptQuest",{questId: currentNPC.currentQuest.id, map:currentMap});
+        }
+        if(evt.keyCode == 8){ //backspace key
+            //Quest declined
+            //questLastPage = false;
+            currentNPCPage=0;
+            //currentNPC.quests[currentNPC.currentQuest].questCurrentPage=0;
+            playerCanMove = true;
+            inDialogBox = false;
+        }
     }
     else{
         if(evt.keyCode == 32){
@@ -1103,18 +1100,17 @@ function handleKeyDown(evt){
     if(evt.keyCode==69){ //E key
         for(var i=0;i<NPCs.length;i++){
             if(NPCs[i].checkPlayerCollision() == true){
-            
+            //Pressed next to npc
 
             socket.emit("checkQuest",{NPCId:NPCs[i].id,questId:NPCs[i].currentQuest.id,map:currentMap});
             currentNPC = NPCs[i];
             return;
-
-
             
             }
         }
         for(var i=0;i<infoBoards.length;i++){
             if(infoBoards[i].checkPlayerCollision() == true){
+                //Pressed next to infoboard
                 playerCanMove = false;
                 inDialogBox = true;
                 customDialog = true;
@@ -1126,10 +1122,16 @@ function handleKeyDown(evt){
         }
         for(var i=0;i<tpPoints.length;i++){
             if(checkPlayerCollisionWithTpPoint(tpPoints[i]) == true){
+                // Pressed next to tpPoint, changing maps
                 // Replace with sail sound
                 dialogBubbleSound.play();
                 changeToMap(tpPoints[i]);
                 return;
+            }
+        }
+        for(var i=0;i<doors.length;i++){
+            if(checkPlayerCollisionWithDoor(doors[i]) == true){
+                socket.emit("open",{doorId:doors[i].id,map:currentMap,type:"door"});
             }
         }
     }
