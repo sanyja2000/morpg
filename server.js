@@ -14,7 +14,7 @@ var maps = [{id:0,name:"Magington city",file:"map1.tmx",tpPoints:[
   {id:1,name:"Underworld",file:"underworld.tmx",tpPoints:[{x:65,y:63,name:"Awake in the real world", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130},
   {x:1070,y:160,name:"Enter the scary dungeon", toMap:3, loadScreenImage:"underworld_load.png",mapName:"Scary dungeon",spawnX:96,spawnY:192}]},
 
-  {id:2,name:"Your house",file:"house1.tmx",tpPoints:[{x:320,y:560,name:"Go outside", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:130,spawnY:130}]},
+  {id:2,name:"Your house",file:"house1.tmx",tpPoints:[{x:320,y:560,name:"Go outside", toMap:0, loadScreenImage:"magington_load.png",mapName:"Magington City",spawnX:710,spawnY:786}]},
 
   {id:3,name:"Scary dungeon",file:"dungeon1.tmx",tpPoints:[{x:1455,y:730,name:"Escape",toMap:1,loadScreenImage:"underworld_load.png",mapName:"The Underworld",spawnX:1792,spawnY:109}]}
 ]; //Storage for EVERYTHING
@@ -36,25 +36,29 @@ maps[0].NPCs = [
   {id:0,name:"Orvald",quests:[0,2,4]},
   {id:1,name:"Sarah",quests:[3],questInteractions:[{questId:2,text:["Hmmm well hello there","I'm Sarah, the fruiterer.","I run this small little shop.","Orvald sent you, right?","I always send him 4 apples.","But now that you are so nice","I'm giving you 3 more.","","Come back if you have some free time.","Bye!"],items:[{name:"apple",pieces:7,equipment:false,iconNumber:33}],itemsGivenToPlayers:[]}]},
   {id:2,name:"John",quests:[]},
-  {id:3,name:"Edward",questInteractions:[{questId:3,text:["Ohh hi there my friend","Did my lovely Sarah send you?","I see","She was right, the housekey is here","Give it to her, will you?"],items:[{name:"house key",pieces:1,equipment:false,iconNumber:70}],itemsGivenToPlayers:[]}],quests:[1]}
+  {id:3,name:"Edward",questInteractions:[{questId:3,text:["Ohh hi there my friend","Did my lovely Sarah send you?","I see","She was right, the housekey is here","Give it to her, will you?"],items:[{name:"house key",pieces:1,equipment:false,iconNumber:70}],itemsGivenToPlayers:[]}],quests:[1]},
+  {id:4,name:"Santa Claus",questInteractions:[],quests:[5]}
+
 ];
 maps[0].NPCsClientSide = [
-  {id:0,name:"Orvald",x:718,y:500,skin:0}, {id:1,name:"Sarah",x:996,y:706,skin:2}, {id:2,name:"John",x:3088, y:1988,skin:3}, {id:3,name:"Edward",x:3158,y:397,skin:4}
+  {id:0,name:"Orvald",x:718,y:500,skin:0}, {id:1,name:"Sarah",x:996,y:706,skin:2}, {id:2,name:"John",x:3088, y:1988,skin:3}, {id:3,name:"Edward",x:3158,y:397,skin:4}, {id:4,name:"Santa Claus",x:1524,y:426,skin:6}
 ];
 maps[1].NPCs = [{id:4,name:"Reaper",quests:[5],questInteractions:[{questId:4,text:["Well, well, well","Who do we got here?","Did Orvald send you?","That little smug..","He probably needs skulls again","Here, give him some","These are fresh harvest"],items:[{name:"skull",pieces:3,equipment:false,iconNumber:195}],itemsGivenToPlayers:[]}]},
 ];
 maps[1].NPCsClientSide = [{id:4,name:"Reaper",x:646,y:980,skin:5}];
 
+maps[0].chests = [{id:0, x:100, y:100, imageIndex:0, isOpen:false, key:{name:"key",pieces:1,equipment:false,iconNumber:70}, loot:[] }];
+
 maps[3].doors = [{id:0, x:1024 ,y:544 ,imageIndex:0, isOpen:false, key:{name:"key",pieces:1,equipment:false,iconNumber:70}}];
 
 maps[3].monsters = [
   {id:0, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:288, y:352,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:1, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:192, y:704,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"another key",pieces:1,iconNumber:71,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}
-  /*{id:2, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:640, y:736,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:3, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:768, y:512,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:4, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:608, y:288,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:5, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1216, y:160,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:6, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1248, y:416,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}*/
+  {id:1, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:192, y:704,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"another key",pieces:1,iconNumber:71,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:2, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:640, y:736,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:3, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:768, y:512,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:4, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:608, y:288,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:5, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1216, y:160,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:6, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1248, y:416,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}
 ];
 
 maps[0].monsters = [
@@ -69,10 +73,17 @@ maps[1].monsters = [
   {id:4, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1350, y:900,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:4,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
 ];
 
+for(var i=0;i<maps.length;i++){
+  for(var j=0;j<maps[i].monsters.length;j++){
+    maps[i].monsters[j].points = [[maps[i].monsters[j].x,maps[i].monsters[j].y],[maps[i].monsters[j].x+200,maps[i].monsters[j].y],[maps[i].monsters[j].x+100,maps[i].monsters[j].y+100]];
+    maps[i].monsters[j].pointCount = 1;
+  }
+}
+
 // TODO create basic 1-2 man test dungeon on map + enemies
-// TODO add loot chests to maps
+// TODO add loot chests to maps <-----
 // TODO reset dungeons if everyone escapes?
-// 
+//  TODO add blinking
 // TODO add chat?
 
 maps[0].droppedItems = [
@@ -107,7 +118,15 @@ var quests = [
 
   {id:4,name:"Hellish favor",
   allowQuests:[],requirements:[{name:"skull",pieces:3,equipment:false,iconNumber:195}],
-  startItems:[],rewards:[{name:"health potion",id:itemIds++,pieces:2,equipment:false,iconNumber:164}]}
+  startItems:[],rewards:[{name:"health potion",id:itemIds++,pieces:2,equipment:false,iconNumber:164}]},
+  
+  {id:5,name:"Here, gems!",
+  allowQuests:[6],requirements:[],
+  startItems:[],rewards:[{name:"gem",id:itemIds++,pieces:2,equipment:false,iconNumber:209},{name:"sword enchant",id:itemIds++,equipment:true,iconNumber:204,description:["LifeSteal +20%","physicdmg +20"],lifeSteal:0.2,physicalDmg:20}]},
+
+  {id:6,name:"EVEN MORE gems!",
+  allowQuests:[7],requirements:[],
+  startItems:[],rewards:[{name:"gem",id:itemIds++,pieces:4,equipment:false,iconNumber:209}]}
 ];
 
 
@@ -215,7 +234,7 @@ function monsterUpdate(){
         if(minimumPlayerInd == -1){
           //No player in detect range
           //TODO: Just wonder around 2 points
-          
+          monsterClass.monsterWonder(monsters[i]);
           //monsters[i].x -= 0.1*monsters[i].moveSpeed
           //monsters[i].y -= Math.sign(monsters[i].y-monsters[i].target.y)*monsters[i].moveSpeed
           continue;
@@ -323,7 +342,14 @@ function playerUpdate(){
         players[i].respawnTimer--;
         //continue;
       }
-      io.to(players[i].id).emit("updateData",{playersArr:players,droppedItemsArr:maps[h].droppedItems,monstersArr:maps[h].monsters,projectileArr:maps[h].projectiles,doorsArr:maps[h].doors});
+      io.to(players[i].id).emit("updateData",
+      {playersArr:players,
+        droppedItemsArr:maps[h].droppedItems,
+        monstersArr:maps[h].monsters,
+        projectileArr:maps[h].projectiles,
+        doorsArr:maps[h].doors,
+        chestsArr:maps[h].chests
+      });
     }
   }
   /*
@@ -424,9 +450,10 @@ setInterval(itemUpdate,1000);
 
 function newConnection(socket){
   console.log(socket.id);
+  //New Player connects
   //increase item ids
   //{id:itemIds++, iconNumber:17, name:"pickaxe", equipment: true, pieces:3}
-  maps[0].players.push({name:"aa",playerHit:0, respawnTimer:-1, poisoned:0, facing:0,baseHealth:250,maxHealth:250, health:250, skin:0, id:socket.id, x:0,y:0, moveDir:[0,0], inventory:new Array(20), acceptedQuests:[], availableQuests:[0], moveSpeed:[3,3],
+  maps[0].players.push({name:"aa",playerHit:0, respawnTimer:-1, poisoned:0, facing:0,baseHealth:250,maxHealth:250, health:250, skin:0, id:socket.id, x:0,y:0, moveDir:[0,0], inventory:new Array(20), acceptedQuests:[], availableQuests:[0,5], moveSpeed:[3,3],
       equipment:new Array(4)/*[
         {id:itemIds++, name:"sword",description:["Physical damage 20"], physicalDmg:20,slotNumber:0, pieces:1, equipment:true, iconNumber:16},
         {id:itemIds++, name:"ring", slotNumber:1, description:["Health regen 2"],healthRegen:2, pieces:1, equipment:true, iconNumber:45},
@@ -723,7 +750,7 @@ function newConnection(socket){
           players[i].equipment[data.index] = null;
           refreshBaseStats(i,data.map);
         }
-        if(data.place == "inventory"){
+        else if(data.place == "inventory"){
 
           if(players[i].inventory[data.index] == null){return;}
 
@@ -750,9 +777,63 @@ function newConnection(socket){
             if(players[i].health>players[i].maxHealth){players[i].health = players[i].maxHealth;}
             if(players[i].inventory[data.index].pieces == 1){
               players[i].inventory[data.index] = null;
+              return;
             }else{
               players[i].inventory[data.index].pieces--;
             }
+          }
+
+          //ENCHANTMENT
+
+          if(players[i].inventory[data.index].name == "sword enchant"){
+            var swordProperties = ["physicalDmg","magicDmg","lifeSteal"]; /// From here
+            if(players[i].equipment[0]==null){return;} // If sword is not equipped
+            //Check if there are enough resources to enchant
+            var gemFound = false;
+            for(var item=0;item<players[i].inventory.length;item++){
+              if(players[i].inventory[item]==null){continue;}
+              if(players[i].inventory[item].name == "gem"){
+                if(players[i].inventory[item].pieces>=1){
+                  players[i].inventory[item].pieces-=1;
+                  gemFound = true;
+                  if(players[i].inventory[item].pieces==0){
+                    players[i].inventory[item]=null;
+                  }
+                  break;
+                }
+              }
+            }
+            if(gemFound==false){
+              console.log(players[i].name+" not enough gems for the enchantment!");
+              return;
+            }
+
+            //Try to transfer properties
+
+            for(var p =0;p<swordProperties.length;p++){
+              if(players[i].inventory[data.index].hasOwnProperty(swordProperties[p])){
+                if(players[i].equipment[0].hasOwnProperty(swordProperties[p])){
+                  players[i].equipment[0][swordProperties[p]] += players[i].inventory[data.index][swordProperties[p]];
+                  /*
+                  TODO: update enchantment text
+                  for(var line =0;line<players[i].equipment[0].description.length;line++){
+                    if(players[i].equipment[0].description[line].indexOf("Physical damage")>-1){
+                      var spl = players[i].equipment[0].description[line].split(" ");
+                      players[i].equipment[0].description[line]
+                    }
+                  }
+                  */
+                  players[i].equipment[0].description.push("+"+swordProperties[p]+" "+players[i].inventory[data.index][swordProperties[p]]);
+                }
+                else{
+                  players[i].equipment[0][swordProperties[p]] = players[i].inventory[data.index][swordProperties[p]];
+                  players[i].equipment[0].description.push("+"+swordProperties[p]+" "+players[i].inventory[data.index][swordProperties[p]]);
+                }
+              }
+            }
+
+            players[i].inventory[data.index] = null;
+            return;
           }
         }
 

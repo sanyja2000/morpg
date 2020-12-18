@@ -148,6 +148,8 @@ settingsMenuImage.src = "img/settingsMenu.png";
 var doorsImage = new Image();
 doorsImage.src = "img/doors.png";
 
+var chestsImage = new Image();
+chestsImage.src = "img/chests.png";
 
 //TODO play map specific music
 
@@ -233,6 +235,9 @@ var monsterImgs = [];
 
 var doors = [];
 
+var chests = [];
+var chestContent = [];
+
 for(var i=0;i<monsterFiles.length;i++){
     var mImg = new Image();
     mImg.src = monsterFiles[i];
@@ -299,8 +304,20 @@ function drawDoor(door){
     ctx.drawImage(doorsImage,64*door.imageIndex,64*door.isOpen,64,64,door.x-viewportX,door.y-viewportY,64,64);
 }
 
+function drawChest(chest){
+    ctx.drawImage(chestsImage,32*chest.imageIndex,32*chest.isOpen,32,32,chest.x-viewportX,chest.y-viewportY,32,32);
+}
+
+
 function checkPlayerCollisionWithDoor(door){
     if((door.x+20-playerX)**2+(door.y-playerY)**2<1600){
+        return true;
+    }
+    return false;
+}
+
+function checkPlayerCollisionWithChest(chest){
+    if((chest.x+20-playerX)**2+(chest.y-playerY)**2<1200){
         return true;
     }
     return false;
@@ -410,6 +427,7 @@ x.onreadystatechange = function () {
 
 var tilesetn = 0;
 var pages = [];
+var mapIsLoading = false;
 function loadTilesets(){
     for(tilesetn=0;tilesetn<tilesetFiles.length;++tilesetn){
         pages[tilesetn] = new XMLHttpRequest();
@@ -459,6 +477,7 @@ function processTilesets(){
 
 
     gameloop = setInterval(update, 1000/60);
+    mapIsLoading = false;
     newWorldSound.play();
 
     if(!alreadyConnected){    
@@ -550,6 +569,7 @@ function updateData(data){
       moveSpeed = players[i].moveSpeed;
       projectiles = data.projectileArr;
       doors = data.doorsArr;
+      chests = data.chestsArr;
       break;
     }
   }
@@ -713,6 +733,14 @@ function update(){
         }
     }
 
+    //Draw chests
+    for(var i=0;i<chests.length;i++){
+        drawChest(chests[i]);
+        if(chests[i].isOpen == false && checkPlayerCollisionWithChest(chests[i])){
+            ctx.drawImage(messageBubble, chests[i].x-viewportX-20,chests[i].y-viewportY-25);
+        }
+    }
+
     //Draw projectiles
 
     for(var i=0;i<projectiles.length;i++){
@@ -812,6 +840,9 @@ function update(){
         }
         
     }
+    playerDrawX = parseInt(playerX);
+    playerDrawY = parseInt(playerY);
+
     ctx.beginPath();
     ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.ellipse(playerX-viewportX+12, playerY-viewportY+34, 8, 5, 0, 0, Math.PI*2);
@@ -849,7 +880,7 @@ function update(){
             ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*1,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
         }
         else if(moveDirection[0] == 0 && moveDirection[1] == 0){
-            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*playerFacing,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*playerFacing,39,37,playerDrawX-viewportX-7,playerDrawY-viewportY,39,37);
         }
     }
     else if(playerCanMove){
@@ -866,10 +897,10 @@ function update(){
             ctx.drawImage(playerSkinImgs[playerSkin],25*currentPlayerAnimationFrame,37*1,25,37,playerX-viewportX,playerY-viewportY,25,37);
         }
         else if(moveDirection[0] == 0 && moveDirection[1] == 0){
-            ctx.drawImage(playerSkinImgs[playerSkin],25,37*playerFacing,25,37,playerX-viewportX,playerY-viewportY,25,37);
+            ctx.drawImage(playerSkinImgs[playerSkin],25,37*playerFacing,25,37,playerDrawX-viewportX,playerDrawY-viewportY,25,37);
         }
     }else{
-        ctx.drawImage(playerSkinImgs[playerSkin],25,37*0,25,37,playerX-viewportX,playerY-viewportY,25,37);
+        ctx.drawImage(playerSkinImgs[playerSkin],25,37*0,25,37,playerDrawX-viewportX,playerDrawY-viewportY,25,37);
     }
 
 
@@ -976,12 +1007,23 @@ function update(){
         //Check collision with doors
         for(var i=0;i<doors.length;i++){
             if(!doors[i].isOpen){
-                console.log(parseInt(upDownInd/mapWidth)*32);
-                if(parseInt(upDownInd/mapWidth)*32>=doors[i].y && parseInt(upDownInd/mapWidth)*32<=doors[i].y+32 && playerX>doors[i].x && playerX<doors[i].x+64){
+                if(parseInt(upDownInd/mapWidth)*32>=doors[i].y && parseInt(upDownInd/mapWidth)*32<=doors[i].y+32 && playerX>doors[i].x && playerX<doors[i].x+72){
                     moveDirection[1] = 0;
                 }
             }
         }
+
+        //Check collision with chests
+        var leftRightNextPosition = (playerX+rightoffset)+moveDirection[0]*moveSpeed[0];
+        for(var i=0;i<chests.length;i++){
+            if((parseInt(upDownInd/mapWidth)+1)*32>=chests[i].y && (parseInt(upDownInd/mapWidth)+1)*32<=chests[i].y+32 && playerX>chests[i].x-16 && playerX<chests[i].x+24){
+                moveDirection[1] = 0;
+            }
+            if(leftRightNextPosition>=chests[i].x && leftRightNextPosition<=chests[i].x+28 && playerY>chests[i].y-36 && playerY<chests[i].y-4){
+                moveDirection[0] = 0;
+            }
+        }
+
         //Add collision to the sides too
 
         if(moveDirection[0]!=0 && moveDirection[1]!=0){
@@ -1121,10 +1163,11 @@ function handleKeyDown(evt){
             }
         }
         for(var i=0;i<tpPoints.length;i++){
-            if(checkPlayerCollisionWithTpPoint(tpPoints[i]) == true){
+            if(checkPlayerCollisionWithTpPoint(tpPoints[i]) == true && mapIsLoading == false){
                 // Pressed next to tpPoint, changing maps
                 // Replace with sail sound
                 dialogBubbleSound.play();
+                mapIsLoading = true;
                 changeToMap(tpPoints[i]);
                 return;
             }
@@ -1132,6 +1175,11 @@ function handleKeyDown(evt){
         for(var i=0;i<doors.length;i++){
             if(checkPlayerCollisionWithDoor(doors[i]) == true){
                 socket.emit("open",{doorId:doors[i].id,map:currentMap,type:"door"});
+            }
+        }
+        for(var i=0;i<chests.length;i++){
+            if(checkPlayerCollisionWithChest(chests[i]) == true){
+                socket.emit("open",{chestId:chests[i].id,map:currentMap,type:"chest"});
             }
         }
     }

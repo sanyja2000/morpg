@@ -1,7 +1,9 @@
 
 
+
 function monsterAttack(monster,projectilesArr,io,map){
     if(monster.type == "ghost"){
+        //Basic melee enemy
         monster.target.health-=monster.attackDmg;
         io.to(monster.target.id).emit("damageParticles",{as:"victim",type:"physical"});
         io.to(monster.target.id).emit("sounds",{sound:"hurt"});
@@ -9,6 +11,7 @@ function monsterAttack(monster,projectilesArr,io,map){
         console.log("Attacking as ghost");
     }
     if(monster.type == "shooter"){
+        //Multiple phase enemy
         if(monster.phase == 0){
             var angle = 0;// Math.atan2(monster.target.x-13-monster.x+monster.w/2,monster.y+monster.h/2-monster.target.y-25)-Math.PI/2;
             var projectileSpeed = 8;
@@ -46,14 +49,23 @@ function monsterAttack(monster,projectilesArr,io,map){
 
 
 function monsterWonder(monster){
-    if(monster.x!=monster.spanwX || monster.y!=monster.spawnY){
-        var angle = Math.atan2(monster.y-monster.spawnY,monster.x-monster.spawnX);
-        monster.x += Math.cos(angle)*monster.moveSpeed;
-        monster.y += Math.sin(angle)*monster.moveSpeed;
+    if(parseInt(monster.x)!=monster.points[monster.pointCount][0] || parseInt(monster.y)!=monster.points[monster.pointCount][1]){
+        var angle = Math.atan2(monster.y-monster.points[monster.pointCount][1],monster.x-monster.points[monster.pointCount][0]);
+        var vx = Math.cos(angle)*Math.min(monster.moveSpeed,Math.abs(monster.x-monster.points[monster.pointCount][0]));
+        monster.x -= vx;
+        monster.y -= Math.sin(angle)*Math.min(monster.moveSpeed,Math.abs(monster.y-monster.points[monster.pointCount][1]));
+        if(vx<0.2){
+            monster.facing = 0;
+        }else{
+            monster.facing = 1;
+        }
+    }else{
+        monster.pointCount=(monster.pointCount+1)%monster.points.length;
     }
 }
 
 
 module.exports = {
-    monsterAttack
+    monsterAttack,
+    monsterWonder
 };
