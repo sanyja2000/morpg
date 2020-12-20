@@ -10,6 +10,12 @@ function monsterAttack(monster,projectilesArr,io,map){
             
         console.log("Attacking as ghost");
     }
+    if(monster.type == "elf"){
+        //Basic melee enemy
+        var projectileSpeed = 8;
+        var angle =  Math.atan2(monster.target.x-13-monster.x+monster.w/2,0*(monster.y+monster.h/2-monster.target.y-25))-Math.PI/2;
+        projectilesArr.push({color:4,x:monster.x+monster.w/2,y:monster.y+monster.h/2,vX:Math.cos(angle)*projectileSpeed,vY:Math.sin(angle)*projectileSpeed,lifespan:60,physicalDmg:45});
+    }
     if(monster.type == "shooter"){
         //Multiple phase enemy
         if(monster.phase == 0){

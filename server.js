@@ -43,7 +43,7 @@ maps[0].NPCs = [
 maps[0].NPCsClientSide = [
   {id:0,name:"Orvald",x:718,y:500,skin:0}, {id:1,name:"Sarah",x:996,y:706,skin:2}, {id:2,name:"John",x:3088, y:1988,skin:3}, {id:3,name:"Edward",x:3158,y:397,skin:4}, {id:4,name:"Santa Claus",x:1524,y:426,skin:6}
 ];
-maps[1].NPCs = [{id:4,name:"Reaper",quests:[5],questInteractions:[{questId:4,text:["Well, well, well","Who do we got here?","Did Orvald send you?","That little smug..","He probably needs skulls again","Here, give him some","These are fresh harvest"],items:[{name:"skull",pieces:3,equipment:false,iconNumber:195}],itemsGivenToPlayers:[]}]},
+maps[1].NPCs = [{id:4,name:"Reaper",quests:[],questInteractions:[{questId:4,text:["Well, well, well","Who do we got here?","Did Orvald send you?","That little smug..","He probably needs skulls again","Here, give him some","These are fresh harvest"],items:[{name:"skull",pieces:3,equipment:false,iconNumber:195}],itemsGivenToPlayers:[]}]},
 ];
 maps[1].NPCsClientSide = [{id:4,name:"Reaper",x:646,y:980,skin:5}];
 
@@ -62,9 +62,13 @@ maps[3].monsters = [
 ];
 
 maps[0].monsters = [
-  {id:0, name:"Ivern",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:5000,image:"img/pumpkivern.png",w:30,h:60,frames:10,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"pumpkin",pieces:1,iconNumber:19,equipment:false}],target:null,attackDmg:20,health:200,maxHealth:200}
-
+  //{id:0, name:"Ivern",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:5000,image:"img/pumpkivern.png",w:30,h:60,frames:10,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"pumpkin",pieces:1,iconNumber:19,equipment:false}],target:null,attackDmg:20,health:200,maxHealth:200}
+  {id:0, name:"Elfzwolf",type:"elf",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/elf1.png",w:21,h:39,frames:4,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[],target:null,attackDmg:20,health:100,maxHealth:100}
 ];
+
+for(var i=0;i<20;i++){
+  maps[0].monsters.push({id:i+1, name:"Elfzwolf",type:"elf",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/elf1.png",w:21,h:39,frames:4,x:1400+parseInt(Math.random()*2000), y:1000+parseInt(Math.random()*500),moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"present",pieces:1,iconNumber:203,equipment:true}],target:null,attackDmg:20,health:100,maxHealth:100});
+}
 maps[1].monsters = [
   {id:0, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:1,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
   {id:1, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1600, y:1100,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:2,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
@@ -121,8 +125,8 @@ var quests = [
   startItems:[],rewards:[{name:"health potion",id:itemIds++,pieces:2,equipment:false,iconNumber:164}]},
   
   {id:5,name:"Here, gems!",
-  allowQuests:[6],requirements:[],
-  startItems:[],rewards:[{name:"gem",id:itemIds++,pieces:2,equipment:false,iconNumber:209},{name:"sword enchant",id:itemIds++,equipment:true,iconNumber:204,description:["LifeSteal +20%","physicdmg +20"],lifeSteal:0.2,physicalDmg:20}]},
+  allowQuests:[6],requirements:[{name:"present",pieces:5,equipment:true,iconNumber:203}],
+  startItems:[],rewards:[{name:"gem",id:itemIds++,pieces:2,equipment:false,iconNumber:209},{name:"sword enchant",pieces:1,id:itemIds++,equipment:true,iconNumber:204,description:["LifeSteal +20%","physicdmg +20"],lifeSteal:0.2,physicalDmg:20}]},
 
   {id:6,name:"EVEN MORE gems!",
   allowQuests:[7],requirements:[],
@@ -143,6 +147,7 @@ var server = http.listen(80, () => {
 });
 
 var socket = require('socket.io');
+const monster = require('./monster');
 
 var io = socket(server);
 
@@ -203,7 +208,7 @@ function giveItem(item,player,map){
   }
 }
 
-setInterval(seePlayers,1000);
+//setInterval(seePlayers,1000);
 
 function monsterUpdate(){
   for(var h=0;h<maps.length;h++){
@@ -233,7 +238,6 @@ function monsterUpdate(){
         }
         if(minimumPlayerInd == -1){
           //No player in detect range
-          //TODO: Just wonder around 2 points
           monsterClass.monsterWonder(monsters[i]);
           //monsters[i].x -= 0.1*monsters[i].moveSpeed
           //monsters[i].y -= Math.sign(monsters[i].y-monsters[i].target.y)*monsters[i].moveSpeed
@@ -323,12 +327,12 @@ function playerUpdate(){
     dropItem(x,y,{equipment:false,iconNumber:20,name:"flower",pieces:1},0);
   }
   
-  //Respawn screen
+  
   for(var h=0;h<maps.length;h++){
     var players = maps[h].players;
     for(var i=0;i<players.length;i++){
+      //Respawn screen
       if(players[i].respawnTimer==0){
-        //TODO: spawn points
         io.to(players[i].id).emit("teleport",{x:250,y:200});
         players[i].health = players[i].maxHealth;
         players[i].respawnTimer=-1;
@@ -363,6 +367,7 @@ function projectileUpdate(){
   for(var h=0;h<maps.length;h++){
     var projectiles = maps[h].projectiles;
     var players = maps[h].players;
+    var monsters = maps[h].monsters;
     for(var i=0;i<projectiles.length;i++){
       if(projectiles[i].lifespan<=0){
         projectiles.splice(i,1);
@@ -373,6 +378,7 @@ function projectileUpdate(){
       projectiles[i].x += projectiles[i].vX;
       projectiles[i].y += projectiles[i].vY;
       projectiles[i].lifespan--;
+      var alreadyHit = false;
       for(var j=0;j<players.length;j++){
         if(projectiles[i] != undefined){
           if((players[j].x+13-projectiles[i].x-7)**2+(players[j].y+18-projectiles[i].y-7)**2<100){
@@ -381,6 +387,19 @@ function projectileUpdate(){
             io.to(players[j].id).emit("sounds",{sound:"hurt"});
             projectiles.splice(i,1);
             i--;
+            alreadyHit = true;
+            continue;
+          }
+        }
+      }
+      if(alreadyHit){continue;}
+      for(var j=0;j<monsters.length;j++){
+        if(projectiles[i] != undefined && projectiles[i].fromPlayer == true){
+          if((monsters[j].x+13-projectiles[i].x-7)**2+(monsters[j].y+18-projectiles[i].y-7)**2<150){
+            monsters[j].health-=projectiles[i].physicalDmg;
+            projectiles.splice(i,1);
+            i--;
+            alreadyHit = true;
             continue;
           }
         }
@@ -463,6 +482,8 @@ function newConnection(socket){
   //players[players.length-1].inventory[0] = {id:itemIds++, name:"penSword",description:["Physical damage 20","Armor pen 20%"], physicalDmg:20, magicDmg:10,armorPen:0.8,slotNumber:0, pieces:1, equipment:true, iconNumber:81};
   maps[0].players[maps[0].players.length-1].inventory[0] = {id:itemIds++, name:"boots", slotNumber:3,description:["Armor 50","Movespeed +1"], armor:50, moveSpeed:1, pieces:1, equipment:true, iconNumber:25};
   maps[0].players[maps[0].players.length-1].inventory[1] = {id:itemIds++, name:"sword",description:["Physical damage 20"], physicalDmg:20,slotNumber:0, pieces:1, equipment:true, iconNumber:16};
+  maps[0].players[maps[0].players.length-1].inventory[2] = {id:itemIds++, name:"bow",description:["Physical damage 40"], physicalDmg:40,slotNumber:0, pieces:1, equipment:true, iconNumber:17};
+  
   refreshBaseStats(maps[0].players.length-1,0);
   minuteUpdate();
   socket.on("loginInfo",loginInfo);
@@ -485,7 +506,7 @@ function newConnection(socket){
     var players = maps[data.map].players;
     for(var i=0;i<players.length;i++){
       if(players[i].id == socket.id){
-        //REMOVE
+        //REMOVE TODO
         //Speedhack and teleport by checking the data validity
         //
         if(players[i].x+players[i].moveSpeed[0]<data.x-players[i].moveSpeed[0]){}
@@ -501,6 +522,7 @@ function newConnection(socket){
   function attack(data){
     var players = maps[data.map].players;
     var monsters = maps[data.map].monsters;
+    var projectiles = maps[data.map].projectiles;
     //Check if attacking players
     for(var i=0;i<players.length;i++){
       if(players[i].id == socket.id){
@@ -508,105 +530,148 @@ function newConnection(socket){
           if(players[j].id == players[i].id){
             continue;
           }
-          if(players[i].equipment[0]==null){continue;}
-          var dist = (players[i].x-players[j].x)**2+(players[i].y-players[j].y)**2;
-          if(dist<2000){
-            var armor = 0;
-            var armorPen = 1;
-            var magicResist = 0;
-            var magicPen = 1;
-            var magicDmg = 0;
-            var physicalDmg = 0;
-            var poisonDmg = 0;
-            var lifeSteal = 0;
-            //
-            // Calculate armor and damage based on all items
-            //
-            for(var k = 0;k<players[i].equipment.length;k++){//Attacker
-              if(players[i].equipment[k]==null){continue;}
-              if(players[i].equipment[k].hasOwnProperty("physicalDmg")){
-                physicalDmg += players[i].equipment[k].physicalDmg;
-              }
-              if(players[i].equipment[k].hasOwnProperty("magicDmg")){
-                magicDmg += players[i].equipment[k].magicDmg;
-              }
-              if(players[i].equipment[k].hasOwnProperty("armorPen")){
-                armorPen *= players[i].equipment[k].armorPen;
-              }
-              if(players[i].equipment[k].hasOwnProperty("magicPen")){
-                magicPen *= players[i].equipment[k].magicPen;
-              }
-              if(players[i].equipment[k].hasOwnProperty("lifeSteal")){
-                lifeSteal += players[i].equipment[k].lifeSteal;
-              }
-              if(players[i].equipment[k].hasOwnProperty("poisonous")){
-                poisonDmg += parseInt(players[i].equipment[k].physicalDmg*0.1);
-              }
-            }
+          if(players[i].equipment[0]==null){continue;} // No weapon equipped
 
-            for(var k = 0;k<players[j].equipment.length;k++){//Victim
-              if(players[j].equipment[k]==null){continue;}
-              if(players[j].equipment[k].hasOwnProperty("armor")){
-                armor += players[j].equipment[k].armor;
-              }
-              if(players[j].equipment[k].hasOwnProperty("magicResist")){
-                magicResist += players[j].equipment[k].magicResist;
-              }
-            }
+          if(players[i].equipment[0].name.indexOf("sword")>-1 || players[i].equipment[0].name.indexOf("blade")>-1){
 
-            var physicalAll = parseInt(physicalDmg*(100/(100+armor*armorPen)));
-            var magicAll = parseInt(magicDmg*(100/(100+magicResist*magicPen)));
-
-            //Random poison test
-            
-            
-            var hitPlayer = false;
-            if(data.direction == 0 && players[j].y<players[i].y){
-              //DAMAGE up
-              hitPlayer = true;
-            }
-            else if(data.direction == 1 && players[j].x>players[i].x){
-              //DAMAGE right
-              hitPlayer = true;
-            }
-            else if(data.direction == 2 && players[j].y>players[i].y){
-              //DAMAGE down 
-              hitPlayer = true;
-            }
-            else if(data.direction == 3 && players[j].x<players[i].x){
-              //DAMAGE left
-              hitPlayer = true;
-            }
-            if(hitPlayer){
-
-              if(poisonDmg>0){
-                players[j].poisoned = 3;
-                players[j].poisonDmg = poisonDmg;
-              }
-              if(lifeSteal>0 && players[i].health<players[i].maxHealth){
-                players[i].health += parseInt((physicalAll+magicAll)*lifeSteal);
+            var dist = (players[i].x-players[j].x)**2+(players[i].y-players[j].y)**2;
+            if(dist<2000){
+              var armor = 0;
+              var armorPen = 1;
+              var magicResist = 0;
+              var magicPen = 1;
+              var magicDmg = 0;
+              var physicalDmg = 0;
+              var poisonDmg = 0;
+              var lifeSteal = 0;
+              //
+              // Calculate armor and damage based on all items
+              //
+              for(var k = 0;k<players[i].equipment.length;k++){//Attacker
+                if(players[i].equipment[k]==null){continue;}
+                if(players[i].equipment[k].hasOwnProperty("physicalDmg")){
+                  physicalDmg += players[i].equipment[k].physicalDmg;
+                }
+                if(players[i].equipment[k].hasOwnProperty("magicDmg")){
+                  magicDmg += players[i].equipment[k].magicDmg;
+                }
+                if(players[i].equipment[k].hasOwnProperty("armorPen")){
+                  armorPen *= players[i].equipment[k].armorPen;
+                }
+                if(players[i].equipment[k].hasOwnProperty("magicPen")){
+                  magicPen *= players[i].equipment[k].magicPen;
+                }
+                if(players[i].equipment[k].hasOwnProperty("lifeSteal")){
+                  lifeSteal += players[i].equipment[k].lifeSteal;
+                }
+                if(players[i].equipment[k].hasOwnProperty("poisonous")){
+                  poisonDmg += parseInt(players[i].equipment[k].physicalDmg*0.1);
+                }
               }
 
-              if(players[j].health>0){
-                players[j].health -= physicalAll+magicAll;
+              for(var k = 0;k<players[j].equipment.length;k++){//Victim
+                if(players[j].equipment[k]==null){continue;}
+                if(players[j].equipment[k].hasOwnProperty("armor")){
+                  armor += players[j].equipment[k].armor;
+                }
+                if(players[j].equipment[k].hasOwnProperty("magicResist")){
+                  magicResist += players[j].equipment[k].magicResist;
+                }
               }
-              if(physicalAll>0){
-                socket.emit("damageParticle",{damage:physicalAll,type:"physical",as:"attacker",at:[players[j].x,players[j].y]});
-                socket.broadcast.to(players[j].id).emit("damageParticle",{damage:physicalAll,type:"physical",as:"victim"});
+
+              var physicalAll = parseInt(physicalDmg*(100/(100+armor*armorPen)));
+              var magicAll = parseInt(magicDmg*(100/(100+magicResist*magicPen)));
+
+              //Random poison test
+              
+              
+              var hitPlayer = false;
+              if(data.direction == 0 && players[j].y<players[i].y){
+                //DAMAGE up
+                hitPlayer = true;
               }
-              if(magicAll>0){
-                socket.emit("damageParticle",{damage:magicAll,type:"magic",as:"attacker",at:[players[j].x,players[j].y]});
-                socket.broadcast.to(players[j].id).emit("damageParticle",{damage:magicAll,type:"magic",as:"victim"});
+              else if(data.direction == 1 && players[j].x>players[i].x){
+                //DAMAGE right
+                hitPlayer = true;
               }
-              socket.emit("sounds",{sound:"swordclang"});
-              socket.broadcast.to(players[j].id).emit('sounds', {sound:"hurt"});
+              else if(data.direction == 2 && players[j].y>players[i].y){
+                //DAMAGE down 
+                hitPlayer = true;
+              }
+              else if(data.direction == 3 && players[j].x<players[i].x){
+                //DAMAGE left
+                hitPlayer = true;
+              }
+              if(hitPlayer){
+
+                if(poisonDmg>0){
+                  players[j].poisoned = 3;
+                  players[j].poisonDmg = poisonDmg;
+                }
+                if(lifeSteal>0 && players[i].health<players[i].maxHealth){
+                  players[i].health += parseInt((physicalAll+magicAll)*lifeSteal);
+                }
+
+                if(players[j].health>0){
+                  players[j].health -= physicalAll+magicAll;
+                }
+                if(physicalAll>0){
+                  socket.emit("damageParticle",{damage:physicalAll,type:"physical",as:"attacker",at:[players[j].x,players[j].y]});
+                  socket.broadcast.to(players[j].id).emit("damageParticle",{damage:physicalAll,type:"physical",as:"victim"});
+                }
+                if(magicAll>0){
+                  socket.emit("damageParticle",{damage:magicAll,type:"magic",as:"attacker",at:[players[j].x,players[j].y]});
+                  socket.broadcast.to(players[j].id).emit("damageParticle",{damage:magicAll,type:"magic",as:"victim"});
+                }
+                socket.emit("sounds",{sound:"swordclang"});
+                socket.broadcast.to(players[j].id).emit('sounds', {sound:"hurt"});
+              }
             }
           }
+          
+
 
         }
 
-        break;
+        //break;
+        //Bow
+        if(players[i].equipment[0].name.indexOf("bow")>-1){
+          var projectileSpeed = 5;
+          console.log("bowing");
+          var xoff = 0;
+          var yoff = 0;
+          var vx = 0;
+          var vy = 0;
+          if(players[i].facing == 0){
+            yoff = -8;
+            xoff = 12;
+            vx = 0;
+            vy = -projectileSpeed;
+          }
+          if(players[i].facing == 1){
+            yoff = 19;
+            xoff = 35;
+            vx = projectileSpeed;
+            vy = 0;
+          }
+          if(players[i].facing == 2){
+            yoff = 44;
+            xoff = 12;
+            vx = 0;
+            vy = projectileSpeed;
+          }
+          if(players[i].facing == 3){
+            yoff = 19;
+            xoff = -10;
+            vx = -projectileSpeed;
+            vy = 0;
+          }
+          projectiles.push({color:6+players[i].facing,x:players[i].x+xoff,y:players[i].y+yoff,vX:vx,vY:vy,lifespan:60,physicalDmg:40,fromPlayer:true});
+  
+        }
       }
+      
+
     }
     //Check if attacking monsters
     for(var i=0;i<players.length;i++){

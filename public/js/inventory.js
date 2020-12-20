@@ -59,11 +59,15 @@ function drawDroppedItem(item){
     ctx.fill();
     ctx.closePath();
     //drawItem(item.x-viewportX,item.y-viewportY+Math.sin(gameFrameCount/20)*3,item);
+    var xoff = yoff = 0;
+    if(item.iconNumber>160){
+        xoff = yoff = -1;
+    }
     if(item.equipment){
-        ctx.drawImage(equipmentsImage,(item.iconNumber%16)*19,parseInt(item.iconNumber/16)*19,19,19,item.x-viewportX,item.y-viewportY+Math.sin(gameFrameCount/20+item.x/200)*3,19,19);
+        ctx.drawImage(equipmentsImage,(item.iconNumber%16)*19-xoff,parseInt(item.iconNumber/16)*19-yoff,19,19,item.x-viewportX,item.y-viewportY+Math.sin(gameFrameCount/20+item.x/200)*3,19,19);
     }
     else{
-        ctx.drawImage(itemsImage,(item.iconNumber%16)*19,parseInt(item.iconNumber/16)*19,19,19,item.x-viewportX,item.y-viewportY+Math.sin(gameFrameCount/20+item.x/200)*3,19,19);
+        ctx.drawImage(itemsImage,(item.iconNumber%16)*19-xoff,parseInt(item.iconNumber/16)*19-yoff,19,19,item.x-viewportX,item.y-viewportY+Math.sin(gameFrameCount/20+item.x/200)*3,19,19);
     }
 }
 
@@ -71,11 +75,15 @@ var droppedItems;
 //var droppedItems = [new DroppedItem(180,300,new Item("log",163,false)),new DroppedItem(400,240,new Item("log",163,false)),new DroppedItem(250,500,new Item("log",163,false))];
 
 function drawItem(x,y,item,sizeMult=1){
+    var xoff = yoff = 0;
+    if(item.iconNumber>160){
+        xoff = yoff = -1;
+    }
     if(item.equipment){
-        ctx.drawImage(equipmentsImage,(item.iconNumber%16)*19,parseInt(item.iconNumber/16)*19,19,19,x,y,19*sizeMult,19*sizeMult);
+        ctx.drawImage(equipmentsImage,(item.iconNumber%16)*19-xoff,parseInt(item.iconNumber/16)*19-yoff,19,19,x,y,19*sizeMult,19*sizeMult);
     }
     else{
-        ctx.drawImage(itemsImage,(item.iconNumber%16)*19,parseInt(item.iconNumber/16)*19,19,19,x,y,19*sizeMult,19*sizeMult);
+        ctx.drawImage(itemsImage,(item.iconNumber%16)*19-xoff,parseInt(item.iconNumber/16)*19-yoff,19,19,x,y,19*sizeMult,19*sizeMult);
     }
 }
 

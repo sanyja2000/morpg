@@ -41,9 +41,9 @@ new Quest(0,"Welcome to the island",
   ["Hey there..","Come closer","I know it's a bit of an awkward request","but I'm running low on skulls.","I need them for some recipies","Find the Reaper in the underworld","and bring me some skulls..","I will give you potions in return."],
   [{name:"skull",pieces:3,equipment:false,iconNumber:195}]),
 
-  new Quest(5,"Here, gems!",
-  ["Come back later,","and i will give you gems!"],
-  []),
+  new Quest(5,"The presents!",
+  ["Ho-ho-ho, traveler!","My elves just gone mad.","They stole the created presents!","","Those poor children","What will happen if they don't get presents?","","Can you bring them back to me?"],
+  [{name:"present",pieces:5,equipment:true,iconNumber:203}]),
 
 
 new Quest(6,"EVEN MORE gems!",

@@ -43,6 +43,8 @@
         <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
         <script src="js/inventory.js"></script>
         <script src="js/quest.js"></script>
+        <script src="js/snowflake.js"></script>
+        <title>MORPG</title>
     </head>
     <body>
 
@@ -153,7 +155,7 @@ chestsImage.src = "img/chests.png";
 
 //TODO play map specific music
 
-var backgroundMusicFiles = ["sound/music/ES_Red_Star.mp3"];
+var backgroundMusicFiles = ["sound/music/ES_A Sleigh Ride for Two.mp3","sound/music/ES_A Sleigh Ride Into Town.mp3","sound/music/ES_On Christmas Morning.mp3","sound/music/ES_Friends From Far Afield.mp3"];//"sound/music/ES_Red_Star.mp3"];
 var backgroundCurrentMusic = -1;
 var backgroundMusicObjects = [];
 for(var i=0;i<backgroundMusicFiles.length;i++){
@@ -168,7 +170,11 @@ for(var i=0;i<backgroundMusicFiles.length;i++){
 }
 
 function shuffleBackgroundMusic(){
+    var lastMusic = backgroundCurrentMusic;
     backgroundCurrentMusic = Math.floor(Math.random())*backgroundMusicFiles.length;
+    if(lastMusic==backgroundCurrentMusic){
+        backgroundCurrentMusic=(backgroundCurrentMusic+1)%backgroundMusicObjects.length;
+    }
     backgroundMusicObjects[backgroundCurrentMusic].play();
 }
 
@@ -229,7 +235,7 @@ var respawnTimer = -1;
 var acceptedQuestIds = [];
 
 var monsters = [];
-var monsterFiles = ["img/ghost.png","img/pumpkivern.png"];
+var monsterFiles = ["img/ghost.png","img/pumpkivern.png","img/elf1.png"];
 var monsterImgs = [];
 
 
@@ -289,6 +295,8 @@ function checkPlayerCollisionWithTpPoint(tpPoint){
 }
 
 
+generateSnowflakes();
+
 var numberParticles = [];
 
 var projectiles = [];
@@ -322,6 +330,7 @@ function checkPlayerCollisionWithChest(chest){
     }
     return false;
 }
+
 
 
 function numberParticle(text,x,y,color){
@@ -358,19 +367,33 @@ function startLoading(){
     shuffleBackgroundMusic();
 }
 
-function changeToMap(tpPoint){
-    clearInterval(gameloop);
-    
-    //TODO new interval->loading animation
-    //+ new map -> new music, play with setInterval
-
-    ctx.drawImage(tpLoadingImages[tpPoints.indexOf(tpPoint)],0,0,WIDTH,HEIGHT);
+function loadingScreenUpdate(tpPoint){
+    ctx.drawImage(loadingScreenImage,0-loadingScreenOffset,0-loadingScreenOffset,WIDTH+loadingScreenOffset,HEIGHT+loadingScreenOffset);
     ctx.textAlign = "center";
     ctx.fillStyle = "white";
     ctx.font = "30px Arial";
     ctx.fillText(tpPoint.name,WIDTH/6,HEIGHT/2);
     ctx.font = "15px Arial";
     ctx.fillText("Loading...",WIDTH/6,HEIGHT/2+25);
+    loadingScreenOffset += 0.08;
+}
+
+var loadingScreenLoop;
+var loadingScreenOffset = 0;
+var loadingScreenImage;
+
+
+function changeToMap(tpPoint){
+    clearInterval(gameloop);
+    
+    //TODO new interval->loading animation
+    //+ new map -> new music, play with setInterval
+
+    loadingScreenOffset = 0;
+    console.log(tpPoint);
+    loadingScreenImage = tpLoadingImages[tpPoints.indexOf(tpPoint)];
+    loadingScreenLoop = setInterval(function(){loadingScreenUpdate(tpPoint);},1000/60);
+
     socket.emit("changeToMap",{from:currentMap,to:tpPoint.toMap});
     currentMap = tpPoint.toMap;
     if(tpPoint.toMap==1){
@@ -475,7 +498,7 @@ function processTilesets(){
 
 
 
-
+    clearInterval(loadingScreenLoop);
     gameloop = setInterval(update, 1000/60);
     mapIsLoading = false;
     newWorldSound.play();
@@ -903,6 +926,10 @@ function update(){
         ctx.drawImage(playerSkinImgs[playerSkin],25,37*0,25,37,playerDrawX-viewportX,playerDrawY-viewportY,25,37);
     }
 
+    //Draw snowflakes :D
+    if(currentMap == 0){
+        snowflakeAnimation();
+    }
 
 
     //Draw HUD
@@ -1086,7 +1113,7 @@ function handleKeyDown(evt){
                 customDialog = false;
                 
             }
-            if(evt.keyCode == 32){
+            if(evt.keyCode == 32){ //space key
                 if(currentNPCPage*4+4<dialogBoxText.length){
                     currentNPCPage++;
                     dialogBubbleSound.play();
@@ -1213,21 +1240,33 @@ function handleKeyUp(evt){
         keysDown.splice(keysDown.indexOf(65),1);
         if(keysDown.indexOf(68)>-1){moveDirection[0]=1;playerFacing=1;return;}
         moveDirection[0]=0;
+        if(keysDown.length>0){
+            playerFacing=1+moveDirection[1];
+        }
     } 
     else if(evt.keyCode==87){// Up
         keysDown.splice(keysDown.indexOf(87),1);
         if(keysDown.indexOf(83)>-1){moveDirection[1]=1;playerFacing=2;return;}
         moveDirection[1]=0;
+        if(keysDown.length>0){
+            playerFacing=2-moveDirection[0];
+        }
     } 
     else if(evt.keyCode==68){// Right
         keysDown.splice(keysDown.indexOf(68),1);
         if(keysDown.indexOf(65)>-1){moveDirection[0]=-1;playerFacing=3;return;}
         moveDirection[0]=0;
+        if(keysDown.length>0){
+            playerFacing=1+moveDirection[1];
+        }
     } 
     else if(evt.keyCode==83){// Down
         keysDown.splice(keysDown.indexOf(83),1);
         if(keysDown.indexOf(87)>-1){moveDirection[1]=-1;playerFacing=0;return;}
         moveDirection[1]=0;
+        if(keysDown.length>0){
+            playerFacing=2-moveDirection[0];
+        }
     } 
     //console.log(evt.keyCode);
 
