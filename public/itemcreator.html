@@ -1,0 +1,171 @@
+<html>
+    <head>
+        <title>Item creator - MORPG</title>
+        <style>
+            canvas{width:614px;height:614px;display:inline;cursor:pointer}
+            #properties{position:absolute;left:620px;top:10px;}
+            div div{margin-left:20px;}
+            input[type="number"]
+            {width:60px;background:transparent;text-align:right;color:orange;
+            font-weight: bold;text-shadow:1px 1px black, -1px 1px brown;border:none;
+            padding-right: 2px;}
+            textarea
+            {background:rgba(0,0,0,0.3);color:orange;
+            font-weight: bold;text-shadow:1px 1px black, -1px 1px brown;border:none;
+            padding:10px; border-radius:20px; border:3px dashed orange;}
+            textarea:focus{outline:none}
+            input[type="number"]:focus{
+                outline:none;
+            }
+            
+            body{background:url('itemcreator_bg.jpg');background-size:cover;
+            color:orange;font-weight: bold;text-shadow:1px 1px black, -1px 1px brown}
+            ul{list-style: none;}
+            li{margin-top:3px;}
+        </style>
+    </head>
+    <body>
+        <canvas id="playCanvas"></canvas>
+        <div id="properties">
+            <ul>
+                <li>Name:<input id="name"></li>
+                <li><input type="checkbox" id="equipment"> equipment</li>
+                <li>Physical Damage:<input id="pdmg" type="number" value="0"></li>
+                <li>Magic Damage:<input id="mdmg" type="number" value="0"></li>
+                <li>Armor:<input id="armor" type="number" value="0"></li>
+                <li>Health: <input id="health" type="number" value="0"></li>
+                <li>Magic Resist:<input id="mresist" type="number" value="0"></li>
+                <li>Armor penetration:<input id="apen" type="number"  value="0">%</li>
+                <li>Magic penetration:<input id="mpen" type="number" value="0">%</li>
+                <li>Arrow speed:<input id="projspeed" type="number" value="0"> (required for bows)</li>
+                <li>Lifesteal:<input id="lifesteal" type="number" value="0">%</li>
+                <li>Slotnumber:<select id="slotnumber">
+                    <option value="-">Not equippable</option>
+                    <option value="0">0 - weapon</option>
+                    <option value="1">1 - accessory</option>
+                    <option value="2">2 - chest</option>
+                    <option value="3">3 - boots</option>
+                </select></li>
+            
+            </ul>
+            <div>
+                <h2>Output:</h2>
+                <textarea id="output" rows="10" cols="80"></textarea>
+            </div>
+        </div>
+        
+        <script>
+            var canvas = document.getElementById("playCanvas");
+            var WIDTH = canvas.width = 307;
+            var HEIGHT = canvas.height = 307;
+            var ctx = canvas.getContext("2d");
+            
+            var itemImg = new Image();
+            itemImg.src = "img/items/items.png";
+            var equipmentImg = new Image();
+            equipmentImg.src = "img/items/equipments.png";
+
+            var currentImg = 0;
+            var images = [itemImg,equipmentImg];
+
+            var selectedItem = 0;
+            var hoveredItem = 0;
+
+            var lastOutput = "";
+
+            function getData(id){
+                return document.getElementById(id).value;
+            }
+
+            function update(){
+                currentImg = document.getElementById("equipment").checked ? 1 : 0;
+                ctx.fillStyle = "gray";
+                ctx.fillRect(0,0,WIDTH,HEIGHT);
+                ctx.drawImage(images[currentImg],0,0);    
+
+                
+                var xoff = 0;
+                var yoff = 0;
+                
+                if(selectedItem%16*19>200){
+                    xoff++;
+                }
+                var yoff = 0;
+                if(parseInt(selectedItem/16)*19>200){
+                    yoff++;
+                }
+
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "yellow";
+                ctx.strokeRect(hoveredItem%16*19+xoff,parseInt(hoveredItem/16)*19+yoff,19,19);
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "orange";
+                ctx.strokeRect(selectedItem%16*19+xoff,parseInt(selectedItem/16)*19+yoff,19,19);
+
+                var name = getData("name");
+                var pdmg = getData("pdmg");
+                var mdmg = getData("mdmg");
+                var armor = getData("armor");
+                var health = getData("health");
+                var mresist = getData("mresist");
+                var apen = getData("apen");
+                var mpen = getData("mpen");
+                var projspeed = getData("projspeed");
+                var lifesteal = getData("lifesteal");
+                var slotnumber = getData("slotnumber");
+
+                var properties = [];
+                var description = [];
+                
+                properties.push('name:"'+name+'"');
+                properties.push("equipment:"+document.getElementById("equipment").checked);
+                properties.push("iconNumber:"+selectedItem);
+                
+
+                if(slotnumber!="-"){properties.push("slotNumber:"+slotnumber)};
+                if(parseInt(pdmg)!=0){properties.push("physicalDmg:"+pdmg);description.push('"Physical dmg '+pdmg+'"');};
+                if(parseInt(mdmg)!=0){properties.push("magicDmg:"+mdmg);description.push('"Magic dmg '+mdmg+'"');};
+                if(parseInt(apen)!=0){properties.push("armorPen:"+apen/100);description.push('"Armor Pen '+apen+'%"');};
+                if(parseInt(mpen)!=0){properties.push("magicPen:"+mpen/100);description.push('"Magic Pen '+mpen+'%"');};
+                if(parseInt(health)!=0){properties.push("health:"+health);description.push('"Health +'+health+'"');};
+                
+                if(parseInt(armor)!=0){properties.push("armor:"+armor);description.push('"Armor '+armor+'"');};
+                if(parseInt(mresist)!=0){properties.push("magicResist:"+mresist);description.push('"Magic Resist '+mresist+'"');};
+                if(parseInt(projspeed)!=0){properties.push("projectileSpeed:"+projspeed);description.push('"Arrow Speed '+projspeed+'"');};
+                if(parseInt(lifesteal)!=0){properties.push("lifeSteal:"+lifesteal/100);description.push('"Lifesteal '+lifesteal+'%"');};
+
+                if(description.length==0){
+                    var output = '{'+properties.join(",")+'}';
+                }
+                else{
+                    var output = '{'+properties.join(",")+", description:["+description.join(",")+']}';
+                }
+                if(output!=lastOutput){
+                    document.getElementById("output").innerHTML = output;
+                    lastOutput = output;
+                }
+            }
+            var loop = setInterval(update,100);
+
+            function mouseDown(evt){
+                var rect = canvas.getBoundingClientRect();
+                var x = (evt.clientX - rect.left)/2;
+                var y = (evt.clientY - rect.top)/2;
+                selectedItem = parseInt(y/19)*16+parseInt(x/19);
+            }
+
+            function mouseMove(evt){
+                var rect = canvas.getBoundingClientRect();
+                var x = (evt.clientX - rect.left)/2;
+                var y = (evt.clientY - rect.top)/2;
+                hoveredItem = parseInt(y/19)*16+parseInt(x/19);
+            }
+
+            
+            canvas.addEventListener("mousedown",mouseDown);
+            canvas.addEventListener("mousemove",mouseMove);
+            
+        </script>
+    </body>
+</html>

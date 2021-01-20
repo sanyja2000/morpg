@@ -3,6 +3,7 @@ var app = express();
 var http = require('http').createServer(app);
 
 var monsterClass = require("./monster");
+var itemClass = require("./items");
 
 var itemIds = 0;
 
@@ -20,6 +21,9 @@ var maps = [{id:0,name:"Magington city",file:"map1.tmx",tpPoints:[
 ]; //Storage for EVERYTHING
 
 
+var mapClass = require("./readmap");
+
+
 for(var i=0;i<maps.length;i++){
   //initalize default map lists
   maps[i].NPCs = [];
@@ -30,11 +34,37 @@ for(var i=0;i<maps.length;i++){
   maps[i].droppedItems = [];
   maps[i].doors = [];
   maps[i].chests = [];
+  maps[i].dayTime = 0;
+  mapClass.processMapLayers(maps[i]);
 }
+
+/*
+
+for(var i=0;i<maps[0].collisionLayer.length;i++){
+  var str = "";
+  for(var j=0;j<maps[0].collisionLayer[i].length;j++){
+    if(maps[0].collisionLayer[i][j]==0){
+      str+=".";
+    }
+    else{
+      str+="O";
+    }
+  }
+  console.log(str);
+}
+
+*/
+
+// readmap test
+
+//console.log(mapClass.findPathToTarget([0,0],[2,2],maps[0]));
+
+//
+
 
 maps[0].NPCs = [
   {id:0,name:"Orvald",quests:[0,2,4]},
-  {id:1,name:"Sarah",quests:[3],questInteractions:[{questId:2,text:["Hmmm well hello there","I'm Sarah, the fruiterer.","I run this small little shop.","Orvald sent you, right?","I always send him 4 apples.","But now that you are so nice","I'm giving you 3 more.","","Come back if you have some free time.","Bye!"],items:[{name:"apple",pieces:7,equipment:false,iconNumber:33}],itemsGivenToPlayers:[]}]},
+  {id:1,name:"Sarah",quests:[3],questInteractions:[{questId:2,text:["Hmmm well hello there","I'm Sarah, the fruiterer.","I run this small little shop.","Orvald sent you, right?","I always send him 4 apples.","But now that you are so nice","I'm giving you 3 more.","","Come back if you have some free time.","Bye!"],items:[{name:"apple",pieces:7,equipment:false,iconNumber:33, cooldown:0, baseCooldown:5}],itemsGivenToPlayers:[]}]},
   {id:2,name:"John",quests:[]},
   {id:3,name:"Edward",questInteractions:[{questId:3,text:["Ohh hi there my friend","Did my lovely Sarah send you?","I see","She was right, the housekey is here","Give it to her, will you?"],items:[{name:"house key",pieces:1,equipment:false,iconNumber:70}],itemsGivenToPlayers:[]}],quests:[1]},
   {id:4,name:"Santa Claus",questInteractions:[],quests:[5]}
@@ -52,34 +82,58 @@ maps[0].chests = [{id:0, x:100, y:100, imageIndex:0, isOpen:false, key:{name:"ke
 maps[3].doors = [{id:0, x:1024 ,y:544 ,imageIndex:0, isOpen:false, key:{name:"key",pieces:1,equipment:false,iconNumber:70}}];
 
 maps[3].monsters = [
-  {id:0, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:288, y:352,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:1, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:192, y:704,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"another key",pieces:1,iconNumber:71,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:2, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:640, y:736,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:3, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:768, y:512,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:4, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:608, y:288,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:5, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1216, y:160,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:6, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/ghost.png",w:45,h:50,frames:6,x:1248, y:416,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}
+  {id:0, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:288, y:352,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"key",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:1, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:192, y:704,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"another key",pieces:1,iconNumber:71,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:2, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:640, y:736,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:3, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:768, y:512,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:4, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:608, y:288,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:5, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:1216, y:160,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:6, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:1248, y:416,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"skey",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}
 ];
 
 maps[0].monsters = [
+  {id:0, name:"Cat",type:"cat",friendly:true,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/cat_relax.png",w:25,h:20,frames:5,x:499,static:true, y:224,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"catnip",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+{id:1, name:"Scary ghost",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:1600,image:"img/enemies/lebego_lofasz_koponya.png",w:67,h:102,frames:3,x:3610, y:439,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"fasz",pieces:1,iconNumber:70,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100}
   //{id:0, name:"Ivern",type:"ghost",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:5000,image:"img/pumpkivern.png",w:30,h:60,frames:10,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"pumpkin",pieces:1,iconNumber:19,equipment:false}],target:null,attackDmg:20,health:200,maxHealth:200}
-  {id:0, name:"Elfzwolf",type:"elf",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/elf1.png",w:21,h:39,frames:4,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[],target:null,attackDmg:20,health:100,maxHealth:100}
 ];
 
 for(var i=0;i<20;i++){
-  maps[0].monsters.push({id:i+1, name:"Elfzwolf",type:"elf",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/elf1.png",w:21,h:39,frames:4,x:1400+parseInt(Math.random()*2000), y:1000+parseInt(Math.random()*500),moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"present",pieces:1,iconNumber:203,equipment:true}],target:null,attackDmg:20,health:100,maxHealth:100});
+  if(Math.random()<0.8){
+    maps[0].monsters.push({id:i+1, name:"Elfzwolf",type:"elf",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/enemies/elf1.png",w:21,h:39,frames:4,x:1400+parseInt(Math.random()*2000), y:1000+parseInt(Math.random()*500),moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"present",pieces:1,iconNumber:203,equipment:true}],target:null,attackDmg:20,health:100,maxHealth:100});
+  } else{
+    maps[0].monsters.push({id:i+1, name:"Elf2",type:"elf2",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/enemies/elf2.png",w:23,h:41,frames:4,x:1400+parseInt(Math.random()*2000), y:1000+parseInt(Math.random()*500),moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"present",pieces:2,iconNumber:203,equipment:true}],target:null,attackDmg:20,health:100,maxHealth:100});
+  }
 }
+
+for(var i=20;i<40;i++){
+    maps[0].monsters.push({id:i+1, name:"Rabbit",type:"rabbit",facing:1,detectRange:40000,friendly:true,abandonRange:160000,attackRange:40000,image:"img/enemies/rabbit.png",w:14,h:15,frames:5,x:1400+parseInt(Math.random()*2000), y:1500+parseInt(Math.random()*500),moveSpeed:2,attackSpeed:0.6,loot:[{id:itemIds++,name:"meat",pieces:1,iconNumber:3,equipment:false}],target:null,health:40,maxHealth:40});
+}
+for(var i=40;i<50;i++){
+  maps[0].monsters.push({id:i+1, name:"Reindeer",type:"reindeer",facing:1,detectRange:40000,friendly:true,abandonRange:160000,attackRange:40000,image:"img/enemies/reindeer.png",w:110,h:55,frames:4,x:200+parseInt(Math.random()*2000), y:1500+parseInt(Math.random()*500),moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"meat",pieces:2,iconNumber:3,equipment:false}],target:null,health:800,maxHealth:800});
+}
+
 maps[1].monsters = [
-  {id:0, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:1,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:1, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1600, y:1100,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:2,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:2, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1550, y:950,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:3,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:3, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1300, y:1350,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:2,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
-  {id:4, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/ghost.png",w:45,h:50,frames:6,x:1350, y:900,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:4,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:0, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:1400, y:1000,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:1,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:1, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:1600, y:1100,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:2,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:2, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:1550, y:950,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:3,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:3, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:1300, y:1350,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:2,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
+  {id:4, name:"Scary ghost",type:"shooter",phase:0,facing:1,detectRange:40000,abandonRange:160000,attackRange:40000,image:"img/enemies/ghost.png",w:45,h:50,frames:6,x:1350, y:900,moveSpeed:1.6,attackSpeed:0.6,loot:[{id:itemIds++,name:"ghasttear",pieces:4,iconNumber:35,equipment:false}],target:null,attackDmg:40,health:100,maxHealth:100},
 ];
 
 for(var i=0;i<maps.length;i++){
   for(var j=0;j<maps[i].monsters.length;j++){
-    maps[i].monsters[j].points = [[maps[i].monsters[j].x,maps[i].monsters[j].y],[maps[i].monsters[j].x+200,maps[i].monsters[j].y],[maps[i].monsters[j].x+100,maps[i].monsters[j].y+100]];
+    if(maps[i].monsters[j].static){
+      continue;
+    }
+    var s = 400;
+    if(maps[i].monsters[j].type=="reindeer"){
+      s = 1000;
+    }
+    var x1 = parseInt((Math.random()-0.5)*s);
+    var y1 = parseInt((Math.random()-0.5)*s);
+    var x2 = parseInt((Math.random()-0.5)*s);
+    var y2 = parseInt((Math.random()-0.5)*s);
+    maps[i].monsters[j].points = [[maps[i].monsters[j].x,maps[i].monsters[j].y],[maps[i].monsters[j].x+x1,maps[i].monsters[j].y+y1],[maps[i].monsters[j].x+x1,maps[i].monsters[j].y+y2]];
     maps[i].monsters[j].pointCount = 1;
   }
 }
@@ -88,23 +142,32 @@ for(var i=0;i<maps.length;i++){
 // TODO add loot chests to maps <-----
 // TODO reset dungeons if everyone escapes?
 //  TODO add blinking
+// TODO add active items (explosion, dash?, )
 // TODO add chat?
+
+
 
 maps[0].droppedItems = [
 /*
 {id:itemIds++,x:544,y:566,equipment:false,iconNumber:163,name:"log",pieces:1},
 {id:itemIds++,x:394,y:488,equipment:false,iconNumber:163,name:"log",pieces:1},*/
+{id:itemIds++,x:200,y:196,equipment:true,iconNumber:7,baseCooldown:3,cooldown:0,description:["Darius Q"],name:"whirlwind",pieces:20},
 {id:itemIds++,x:1887,y:106,equipment:true,iconNumber:65,poisonous:true,slotNumber:0,physicalDmg:40,description:["Poisonous","Physical dmg 40"],name:"poisoned blade",pieces:1},
 {id:itemIds++,x:1887,y:136,equipment:true,iconNumber:80,lifeSteal:0.1,slotNumber:0,physicalDmg:20,description:["Lifesteal","Physical dmg 20"],name:"bloody blade",pieces:1},
-{id:itemIds++,x:1174,y:64,equipment:true,iconNumber:10,slotNumber:3,description:["Move Speed +20"],moveSpeed:20,name:"gotta go fast",pieces:2}
-
-];
+//{id:itemIds++,x:1174,y:64,equipment:true,iconNumber:10,slotNumber:3,description:["Move Speed +20"],moveSpeed:20,name:"gotta go fast",pieces:2}
+{id:itemIds++,x:1174,y:64,equipment:true,iconNumber:160,slotNumber:2,description:["Armor 120"],armor:120,name:"Chestplate",pieces:1},
+{id:itemIds++,x:1204,y:64,equipment:true,iconNumber:182,slotNumber:2,description:["Armor 80"],armor:80,name:"Santa's cape",pieces:1},
+{id:itemIds++,x:1174,y:200,equipment:true,iconNumber:192,slotNumber:1,description:["MagicDamage 10"],magicDmg:10,name:"Magic ring",pieces:1},
+{id:itemIds++,x:1174,y:260,equipment:true,iconNumber:122,slotNumber:1,description:["Armor 50"],armor:50,name:"Light shield",pieces:1},
+{id:itemIds++,x:1174,y:260,equipment:true,iconNumber:133,slotNumber:2,description:["Armor 1000"],armor:1000,name:"I'm disabled shield",pieces:1},
+{id:itemIds++,x:300,y:260, name:"sadd bow",slotNumber:0,equipment:true,iconNumber:116,physicalDmg:14,armorPen:0.05,projectileSpeed:8}];
 
 var quests = [
   {id:0,name:"Welcome to the island",
   allowQuests:[2],
   requirements:[{name:"log",pieces:3,equipment:false,iconNumber:163}],
-  startItems:[],rewards:[{ name:"shallow sword",description:["Physical damage 10"], physicalDmg:10,slotNumber:0, pieces:1, equipment:true, iconNumber:16}]},
+  startItems:[],
+  rewards:[{ name:"shallow sword",description:["Physical damage 10"], physicalDmg:10,slotNumber:0, pieces:1, equipment:true, iconNumber:16}]},
   
   
   {id:1,name:"Flowers for my mom",
@@ -126,11 +189,8 @@ var quests = [
   
   {id:5,name:"Here, gems!",
   allowQuests:[6],requirements:[{name:"present",pieces:5,equipment:true,iconNumber:203}],
-  startItems:[],rewards:[{name:"gem",id:itemIds++,pieces:2,equipment:false,iconNumber:209},{name:"sword enchant",pieces:1,id:itemIds++,equipment:true,iconNumber:204,description:["LifeSteal +20%","physicdmg +20"],lifeSteal:0.2,physicalDmg:20}]},
+  startItems:[],rewards:[{name:"gem",id:itemIds++,pieces:2,equipment:false,iconNumber:209},{name:"sword enchant",pieces:1,id:itemIds++,equipment:true,iconNumber:204,description:["LifeSteal +20%","physicdmg +20"],lifeSteal:0.2,physicalDmg:20}]}
 
-  {id:6,name:"EVEN MORE gems!",
-  allowQuests:[7],requirements:[],
-  startItems:[],rewards:[{name:"gem",id:itemIds++,pieces:4,equipment:false,iconNumber:209}]}
 ];
 
 
@@ -199,7 +259,7 @@ function giveItem(item,player,map){
     for(var key in item) {
       var value = item[key];
       if(key == "id"){
-        player.inventory[availableIndex] .id = itemIds++;
+        player.inventory[availableIndex].id = itemIds++;
         continue;
       }
       player.inventory[availableIndex][key] = value;
@@ -224,7 +284,7 @@ function monsterUpdate(){
         i--;
         continue;
       }
-      if(monsters.target==null){ //Check players, no target right now
+      if(monsters[i].target==null){ //Check players, no target right now
         var minimumDist = monsters[i].detectRange+1;
         var minimumPlayerInd = -1;
         for(var j=0;j<players.length;j++){
@@ -244,7 +304,22 @@ function monsterUpdate(){
           continue;
         }
         //Player detected
-        monsters[i].target = players[minimumPlayerInd];
+        if(monsters[i].friendly){
+          //Do nothing
+          monsterClass.monsterWonder(monsters[i]);
+          if(monsters[i].static){
+            var side = monsters[i].x-players[minimumPlayerInd].x;
+            if(side<0.2){
+              monsters[i].facing = 0;
+            }else{
+              monsters[i].facing = 1;
+            }
+          }
+          continue;
+        }else{
+          monsters[i].target = players[minimumPlayerInd];
+          monsters[i].followingPlayer = 0;
+        }
       }
       if(monsters[i].target!=null){
         var d = (monsters[i].x-monsters[i].target.x)**2 + (monsters[i].y-monsters[i].target.y)**2;
@@ -271,15 +346,73 @@ function monsterUpdate(){
           }
         }
         //move the monster in the direction of the player
-        var angle = Math.atan2(monsters[i].y-monsters[i].target.y,monsters[i].x-monsters[i].target.x);
-        var mSpeedX = Math.cos(angle)*monsters[i].moveSpeed;
-        monsters[i].x -= mSpeedX;
-        monsters[i].y -= Math.sin(angle)*monsters[i].moveSpeed;
-        //change the facing of the monster based on character position
-        if(mSpeedX>0.2){
-          monsters[i].facing = 1;
-        }else{
-          monsters[i].facing = 0;
+        if(minimumDist>(monsters[i].h/2)**2){
+
+          if(players.includes(monsters[i].target)){
+
+            var monsterTile = [Math.floor(monsters[i].x/32),Math.floor(monsters[i].y/32)+1];
+            var playerTile = [Math.floor(monsters[i].target.x/32),Math.floor(monsters[i].target.y/32)+1];
+            
+            /*
+            if(monsterTile.join(",") == playerTile.join(",")){
+            */
+              var angle = Math.atan2(monsters[i].y-monsters[i].target.y,monsters[i].x-monsters[i].target.x);
+              //we need mspeedx to calculate facing
+              var mSpeedX = Math.cos(angle)*monsters[i].moveSpeed;
+              var xoff = 0,yoff = 0;
+              if(mSpeedX<0){
+                xoff = monsters[i].w;
+              }
+              var mSpeedY = Math.sin(angle)*monsters[i].moveSpeed;
+              if(mSpeedY<0){
+                yoff = monsters[i].h;
+              }
+              //collision detection
+              if( maps[h].collisionLayer[Math.floor(monsters[i].y/32)+1][Math.floor((monsters[i].x-mSpeedX+xoff)/32)]==0 || maps[h].walkableLayer[Math.floor(monsters[i].y/32)+1][Math.floor((monsters[i].x-mSpeedX+xoff)/32)]!=0 ){
+                monsters[i].x -= mSpeedX;
+              }
+              if( maps[h].collisionLayer[Math.floor((monsters[i].y-mSpeedY+yoff)/32)+1][Math.floor((monsters[i].x)/32)]==0 || maps[h].walkableLayer[Math.floor((monsters[i].y-mSpeedY+yoff)/32)+1][Math.floor((monsters[i].x)/32)]!=0){
+                monsters[i].y -= mSpeedY;
+              }
+              //change the facing of the monster based on character position
+              if(mSpeedX>0.2){
+                monsters[i].facing = 1;
+              }else{
+                monsters[i].facing = 0;
+              }
+            /*
+            }else{
+              if(monsters[i].followingPlayer%180){
+                var d = mapClass.findPathToTarget(monsterTile,playerTile,maps[h])[0];
+                monsters[i].dest = [d.x*16+8,d.y*16+8];
+                //setTimeout(function(mnster,mTile,pTile,map){mnster.dest = mapClass.findPathToTarget(mTile,pTile,map)[1]}.bind(null,monster,monsterTile,playerTile,maps[h]),1);
+              }
+              if(monsters[i].dest){
+                var angle = Math.atan2(monsters[i].y-monsters[i].dest[1]*16+8,monsters[i].x-monsters[i].dest[0]*16+8);
+                var mSpeedX = Math.cos(angle)*monsters[i].moveSpeed;
+
+                monsters[i].x -= mSpeedX;
+                monsters[i].y -= Math.sin(angle)*monsters[i].moveSpeed;
+                //change the facing of the monster based on character position
+                if(mSpeedX>0.2){
+                  monsters[i].facing = 1;
+                }else{
+                  monsters[i].facing = 0;
+                }
+
+              }
+              
+
+              monsters[i].followingPlayer++;
+              
+            }
+            */
+          }else{
+            //player is not on the same map
+            monsters[i].target = null;
+          }
+
+          
         }
       }
     }
@@ -297,6 +430,13 @@ function movePlayerToMap(playerId,from,to){
       break;
     }
   }
+}
+
+function clamp(n,from,to){
+  //Basic clamp, constrain function
+  if(n<from){return from;}
+  if(n>to){return to;}
+  return n;
 }
 
 function minuteUpdate(){
@@ -352,7 +492,8 @@ function playerUpdate(){
         monstersArr:maps[h].monsters,
         projectileArr:maps[h].projectiles,
         doorsArr:maps[h].doors,
-        chestsArr:maps[h].chests
+        chestsArr:maps[h].chests,
+        daytime:maps[h].dayTime
       });
     }
   }
@@ -381,9 +522,49 @@ function projectileUpdate(){
       var alreadyHit = false;
       for(var j=0;j<players.length;j++){
         if(projectiles[i] != undefined){
-          if((players[j].x+13-projectiles[i].x-7)**2+(players[j].y+18-projectiles[i].y-7)**2<100){
-            players[j].health-=projectiles[i].physicalDmg;
-            io.to(players[j].id).emit("damageParticle",{damage:projectiles[i].physicalDmg,type:"magic",as:"victim"});
+          if((players[j].x+13-projectiles[i].x-7)**2+(players[j].y+18-projectiles[i].y-7)**2<300 && players[j].health>0){
+            
+            var armor = 0;
+            var magicResist = 0;
+            for(var k = 0;k<players[j].equipment.length;k++){//Victim
+              if(players[j].equipment[k]==null){continue;}
+              if(players[j].equipment[k].hasOwnProperty("armor")){
+                armor += players[j].equipment[k].armor;
+              }
+              if(players[j].equipment[k].hasOwnProperty("magicResist")){
+                magicResist += players[j].equipment[k].magicResist;
+              }
+            }
+
+
+            if(projectiles[i].fromPlayer==true){ // If projectile was fired by player
+              if(projectiles[i].armorPen>1){projectiles[i].armorPen=1;}
+              if(projectiles[i].maginPen>1){projectiles[i].magicPen=1;}
+              if(armor>0){
+                var physicalAll = parseInt(projectiles[i].physicalDmg*(100/(100+armor*(1-projectiles[i].armorPen))));
+              }else{
+                var physicalAll = parseInt(projectiles[i].physicalDmg);
+              }
+              if(magicResist>0){
+                var magicAll = parseInt(projectiles[i].magicDmg*(100/(100+magicResist*(1-projectiles[i].magicPen))));
+              }
+              else{
+                var magicAll = parseInt(projectiles[i].magicDmg);
+              }
+              if(physicalAll>0){
+                players[j].health-=physicalAll;
+                io.to(players[j].id).emit("damageParticle",{damage:physicalAll,type:"physical",as:"victim"});
+              }
+              if(magicAll>0){
+                players[j].health-=magicAll;
+                io.to(players[j].id).emit("damageParticle",{damage:magicAll,type:"magic",as:"victim"});
+              }
+            }else{
+              players[j].health -= parseInt(projectiles[i].physicalDmg*(100/(100+armor)));
+              io.to(players[j].id).emit("damageParticle",{damage:parseInt(projectiles[i].physicalDmg*(100/(100+armor))),type:"physical",as:"victim"});
+            }
+
+
             io.to(players[j].id).emit("sounds",{sound:"hurt"});
             projectiles.splice(i,1);
             i--;
@@ -395,8 +576,20 @@ function projectileUpdate(){
       if(alreadyHit){continue;}
       for(var j=0;j<monsters.length;j++){
         if(projectiles[i] != undefined && projectiles[i].fromPlayer == true){
-          if((monsters[j].x+13-projectiles[i].x-7)**2+(monsters[j].y+18-projectiles[i].y-7)**2<150){
+          var d=2200/89*monsters[j].w-19500/89;
+          if((monsters[j].x+monsters[j].w/2-projectiles[i].x-7)**2+(monsters[j].y+monsters[j].h/2-projectiles[i].y-7)**2<d){
+            //deal damage
             monsters[j].health-=projectiles[i].physicalDmg;
+            //knockback
+            var kbm = 0;//knockbackmultiplier
+            if(projectiles[i].fromPlayer && projectiles[i].knockBack){
+              kbm = projectiles[i].knockBack;
+            }
+            monsters[j].x+=projectiles[i].vX*kbm*2; //knockback multiplier
+            monsters[j].y+=projectiles[i].vY*kbm;
+            
+            
+
             projectiles.splice(i,1);
             i--;
             alreadyHit = true;
@@ -412,6 +605,7 @@ function updateFrames(){
   monsterUpdate();
   projectileUpdate();
   playerUpdate();
+  daytimeUpdate();
 }
 
 setInterval(updateFrames,1000/60);
@@ -419,51 +613,24 @@ setInterval(updateFrames,1000/60);
 
 
 function itemUpdate(){
+  //Gets updated 10fps
   for(var h=0;h<maps.length;h++){
     for(var i=0;i<maps[h].players.length;i++){
-      refreshBaseStats(i,h);
+      itemClass.refreshBaseStats(maps[h].players[i],io);
+      itemClass.updateCooldowns(maps[h].players[i]);
     }
+    //if(h==0){console.log(maps[h].dayTime);}
   }
 }
 
-function refreshBaseStats(playerNum,map){
-  var players = maps[map].players; 
-  var hp = players[playerNum].baseHealth;
-  var healthRegen = 0;
-  var moveSpeed = 0;
-  for(var i=0;i<players[playerNum].equipment.length;i++){
-    if(players[playerNum].equipment[i]!=null){
-      if(players[playerNum].equipment[i].hasOwnProperty("health")){
-        hp+=players[playerNum].equipment[i].health;
-      }
-      if(players[playerNum].equipment[i].hasOwnProperty("healthRegen") && players[playerNum].poisoned == 0){
-        healthRegen+=players[playerNum].equipment[i].healthRegen;
-      }
-      if(players[playerNum].equipment[i].hasOwnProperty("moveSpeed")){
-        moveSpeed+=players[playerNum].equipment[i].moveSpeed;
-      }
-    }
+function daytimeUpdate(){
+  for(var i=0;i<maps.length;i++){
+    maps[i].dayTime = ((clamp(Math.sin(new Date().getTime() / 100000),-0.5,0.5)+0.5)*0.8).toFixed(2);
   }
-
-  if(players[playerNum].poisoned>0){
-    players[playerNum].poisoned--;
-    players[playerNum].health-=players[playerNum].poisonDmg;
-    io.to(players[playerNum].id).emit("damageParticle",{damage:players[playerNum].poisonDmg,type:"poison",as:"victim"});
-  }
-
-  players[playerNum].moveSpeed = [3+moveSpeed,3+moveSpeed];
-
-  players[playerNum].maxHealth = hp;
-  if(players[playerNum].health+healthRegen>=players[playerNum].maxHealth){
-    players[playerNum].health=players[playerNum].maxHealth 
-  }
-  else{
-    players[playerNum].health+=healthRegen;
-  }
-
-
 }
-setInterval(itemUpdate,1000);
+
+
+setInterval(itemUpdate,100);
 
 
 
@@ -472,8 +639,8 @@ function newConnection(socket){
   //New Player connects
   //increase item ids
   //{id:itemIds++, iconNumber:17, name:"pickaxe", equipment: true, pieces:3}
-  maps[0].players.push({name:"aa",playerHit:0, respawnTimer:-1, poisoned:0, facing:0,baseHealth:250,maxHealth:250, health:250, skin:0, id:socket.id, x:0,y:0, moveDir:[0,0], inventory:new Array(20), acceptedQuests:[], availableQuests:[0,5], moveSpeed:[3,3],
-      equipment:new Array(4)/*[
+  maps[0].players.push({name:"aa",playerHit:0, respawnTimer:-1, poisoned:0, facing:0,baseHealth:250,maxHealth:250, health:250, skin:0, id:socket.id, x:0,y:0, moveDir:[0,0], inventory:new Array(20), acceptedQuests:[], availableQuests:[0,5], moveSpeed:[3,3], buffs:[],
+      equipment:new Array(4), abilityAnimationImg:null, abilityAnimationFrame:-1/*[
         {id:itemIds++, name:"sword",description:["Physical damage 20"], physicalDmg:20,slotNumber:0, pieces:1, equipment:true, iconNumber:16},
         {id:itemIds++, name:"ring", slotNumber:1, description:["Health regen 2"],healthRegen:2, pieces:1, equipment:true, iconNumber:45},
         {id:itemIds++, name:"jacket", slotNumber:2, pieces:1,description:["Armor 100","Health 150"], armor:100, health:150, equipment:true, iconNumber:182},
@@ -481,10 +648,12 @@ function newConnection(socket){
     });
   //players[players.length-1].inventory[0] = {id:itemIds++, name:"penSword",description:["Physical damage 20","Armor pen 20%"], physicalDmg:20, magicDmg:10,armorPen:0.8,slotNumber:0, pieces:1, equipment:true, iconNumber:81};
   maps[0].players[maps[0].players.length-1].inventory[0] = {id:itemIds++, name:"boots", slotNumber:3,description:["Armor 50","Movespeed +1"], armor:50, moveSpeed:1, pieces:1, equipment:true, iconNumber:25};
-  maps[0].players[maps[0].players.length-1].inventory[1] = {id:itemIds++, name:"sword",description:["Physical damage 20"], physicalDmg:20,slotNumber:0, pieces:1, equipment:true, iconNumber:16};
-  maps[0].players[maps[0].players.length-1].inventory[2] = {id:itemIds++, name:"bow",description:["Physical damage 40"], physicalDmg:40,slotNumber:0, pieces:1, equipment:true, iconNumber:17};
-  
-  refreshBaseStats(maps[0].players.length-1,0);
+  maps[0].players[maps[0].players.length-1].inventory[1] = {id:itemIds++, name:"sword",description:["Physical damage 40"], physicalDmg:40,slotNumber:0, pieces:1, equipment:true, iconNumber:16};
+  maps[0].players[maps[0].players.length-1].inventory[2] = {id:itemIds++, name:"bow",description:["Physical damage 20","Pspeed 8"], physicalDmg:20,projectileSpeed:8,slotNumber:0, pieces:1, equipment:true, iconNumber:17};
+  maps[0].players[maps[0].players.length-1].inventory[3] = {id:itemIds++, name:"crossbow",description:["Physical damage 30","Pspeed 10","KnockBack 2"], physicalDmg:30,projectileSpeed:10,slotNumber:0,knockBack:2, pieces:1, equipment:true, iconNumber:17};
+  maps[0].players[maps[0].players.length-1].inventory[4] = {id:itemIds++, name:"torch",equipment:true,iconNumber:136,slotNumber:0, pieces:1};
+
+  //refreshBaseStats(maps[0].players.length-1,0);
   minuteUpdate();
   socket.on("loginInfo",loginInfo);
   function loginInfo(data){
@@ -527,7 +696,7 @@ function newConnection(socket){
     for(var i=0;i<players.length;i++){
       if(players[i].id == socket.id){
         for(var j=0;j<players.length;j++){
-          if(players[j].id == players[i].id){
+          if(players[j].id == players[i].id || players[j].health<=0){
             continue;
           }
           if(players[i].equipment[0]==null){continue;} // No weapon equipped
@@ -537,9 +706,9 @@ function newConnection(socket){
             var dist = (players[i].x-players[j].x)**2+(players[i].y-players[j].y)**2;
             if(dist<2000){
               var armor = 0;
-              var armorPen = 1;
+              var armorPen = 0;
               var magicResist = 0;
-              var magicPen = 1;
+              var magicPen = 0;
               var magicDmg = 0;
               var physicalDmg = 0;
               var poisonDmg = 0;
@@ -556,10 +725,10 @@ function newConnection(socket){
                   magicDmg += players[i].equipment[k].magicDmg;
                 }
                 if(players[i].equipment[k].hasOwnProperty("armorPen")){
-                  armorPen *= players[i].equipment[k].armorPen;
+                  armorPen += players[i].equipment[k].armorPen;
                 }
                 if(players[i].equipment[k].hasOwnProperty("magicPen")){
-                  magicPen *= players[i].equipment[k].magicPen;
+                  magicPen += players[i].equipment[k].magicPen;
                 }
                 if(players[i].equipment[k].hasOwnProperty("lifeSteal")){
                   lifeSteal += players[i].equipment[k].lifeSteal;
@@ -578,10 +747,19 @@ function newConnection(socket){
                   magicResist += players[j].equipment[k].magicResist;
                 }
               }
-
-              var physicalAll = parseInt(physicalDmg*(100/(100+armor*armorPen)));
-              var magicAll = parseInt(magicDmg*(100/(100+magicResist*magicPen)));
-
+              if(armorPen>1){armorPen=1;}
+              if(magicPen>1){magicPen=1;}
+              if(armor>0){
+                var physicalAll = parseInt(physicalDmg*(100/(100+armor*(1-armorPen))));
+              }else{
+                var physicalAll = parseInt(physicalDmg);
+              }
+              if(magicResist>0){
+                var magicAll = parseInt(magicDmg*(100/(100+magicResist*(1-magicPen))));
+              }
+              else{
+                var magicAll = parseInt(magicDmg);
+              }
               //Random poison test
               
               
@@ -635,9 +813,8 @@ function newConnection(socket){
 
         //break;
         //Bow
-        if(players[i].equipment[0].name.indexOf("bow")>-1){
-          var projectileSpeed = 5;
-          console.log("bowing");
+        if(players[i].equipment[0] != null && players[i].equipment[0].name.indexOf("bow")>-1){
+          var projectileSpeed =players[i].equipment[0].projectileSpeed;
           var xoff = 0;
           var yoff = 0;
           var vx = 0;
@@ -666,7 +843,48 @@ function newConnection(socket){
             vx = -projectileSpeed;
             vy = 0;
           }
-          projectiles.push({color:6+players[i].facing,x:players[i].x+xoff,y:players[i].y+yoff,vX:vx,vY:vy,lifespan:60,physicalDmg:40,fromPlayer:true});
+
+          var proj = {color:6+players[i].facing,x:players[i].x+xoff,y:players[i].y+yoff,vX:vx,vY:vy,lifespan:60,fromPlayer:true};
+          var armorPen = 0;
+          var magicPen = 0;
+          var magicDmg = 0;
+          var physicalDmg = 0;
+          var kbm = 0;
+          for(var k = 0;k<players[i].equipment.length;k++){//Attacker
+            if(players[i].equipment[k]==null){continue;}
+            if(players[i].equipment[k].hasOwnProperty("physicalDmg")){
+              physicalDmg += players[i].equipment[k].physicalDmg;
+            }
+            if(players[i].equipment[k].hasOwnProperty("magicDmg")){
+              magicDmg += players[i].equipment[k].magicDmg;
+            }
+            if(players[i].equipment[k].hasOwnProperty("armorPen")){
+              armorPen += players[i].equipment[k].armorPen;
+            }
+            if(players[i].equipment[k].hasOwnProperty("magicPen")){
+              magicPen += players[i].equipment[k].magicPen;
+            }
+            if(players[i].equipment[k].hasOwnProperty("knockBack")){
+              kbm += players[i].equipment[k].knockBack;
+            }
+            /*if(players[i].equipment[k].hasOwnProperty("lifeSteal")){
+              lifeSteal += players[i].equipment[k].lifeSteal;
+            }
+            if(players[i].equipment[k].hasOwnProperty("poisonous")){
+              poisonDmg += parseInt(players[i].equipment[k].physicalDmg*0.1);
+            }*/
+          }
+
+
+          //var poisonDmg = 0;
+          //var lifeSteal = 0;
+          proj.physicalDmg = physicalDmg;
+          proj.armorPen = armorPen;
+          proj.magicDmg = magicDmg;
+          proj.magicPen = magicPen;
+          proj.knockBack = kbm;
+
+          projectiles.push(proj);
   
         }
       }
@@ -679,33 +897,92 @@ function newConnection(socket){
         for(var j=0;j<monsters.length;j++){
           
           if(players[i].equipment[0]==null){continue;}
-          var dist = (players[i].x-monsters[j].x)**2+(players[i].y-monsters[j].y)**2;
-          if(dist<2000){
+          
+          if(players[i].equipment[0].name.indexOf("sword")>-1 || players[i].equipment[0].name.indexOf("blade")>-1){
+            //var d=2200/89*monsters[j].w-19500/89;
+            //var dist = (players[i].x+12-monsters[j].x-monsters[j].w/2)**2+(players[i].y+15-monsters[j].y-monsters[j].h/2)**2;
+            
+            if (players[i].x < monsters[j].x + monsters[j].w &&
+              players[i].x + 39 > monsters[j].x &&
+              players[i].y < monsters[j].y + monsters[j].h &&
+              players[i].y + 37 > monsters[j].y) {
+               // collision detected!
+
+              var armor = 0;
+              var armorPen = 1;
+              var magicResist = 0;
+              var magicPen = 1;
+              var magicDmg = 0;
+              var physicalDmg = 0;
+              var poisonDmg = 0;
+              var lifeSteal = 0;
+              //
+              // Calculate armor and damage based on all items
+              //
+              for(var k = 0;k<players[i].equipment.length;k++){//Attacker
+                if(players[i].equipment[k]==null){continue;}
+                if(players[i].equipment[k].hasOwnProperty("physicalDmg")){
+                  physicalDmg += players[i].equipment[k].physicalDmg;
+                }
+                if(players[i].equipment[k].hasOwnProperty("magicDmg")){
+                  magicDmg += players[i].equipment[k].magicDmg;
+                }
+                if(players[i].equipment[k].hasOwnProperty("armorPen")){
+                  armorPen *= players[i].equipment[k].armorPen;
+                }
+                if(players[i].equipment[k].hasOwnProperty("magicPen")){
+                  magicPen *= players[i].equipment[k].magicPen;
+                }
+                if(players[i].equipment[k].hasOwnProperty("lifeSteal")){
+                  lifeSteal += players[i].equipment[k].lifeSteal;
+                }
+                if(players[i].equipment[k].hasOwnProperty("poisonous")){
+                  poisonDmg += parseInt(players[i].equipment[k].physicalDmg*0.1);
+                }
+              }
 
 
-            var hitMonster = false;
-            if(data.direction == 0 && monsters[j].y<players[i].y){
-              //DAMAGE up
-              hitMonster = true;
-            }
-            else if(data.direction == 1 && monsters[j].x>players[i].x){
-              //DAMAGE right
-              hitMonster = true;
-            }
-            else if(data.direction == 2 && monsters[j].y>players[i].y){
-              //DAMAGE down 
-              hitMonster = true;
-            }
-            else if(data.direction == 3 && monsters[j].x<players[i].x){
-              //DAMAGE left
-              hitMonster = true;
-            }
-            if(hitMonster && monsters[j].health>0){
-              monsters[j].health-=players[i].equipment[0].physicalDmg;
-              io.to(players[i].id).emit("damageParticle",{damage:players[i].equipment[0].physicalDmg,type:"physical",as:"attacker",at:[monsters[j].x,monsters[j].y]});
-              io.to(players[i].id).emit("sounds",{sound:"swordclang"});
-            }
 
+
+              var hitMonster = false;
+              if(data.direction == 0 && monsters[j].y<players[i].y){
+                //DAMAGE up
+                hitMonster = true;
+              }
+              else if(data.direction == 1 && monsters[j].x>players[i].x){
+                //DAMAGE right
+                hitMonster = true;
+              }
+              else if(data.direction == 2 && monsters[j].y>players[i].y){
+                //DAMAGE down 
+                hitMonster = true;
+              }
+              else if(data.direction == 3 && monsters[j].x<players[i].x){
+                //DAMAGE left
+                hitMonster = true;
+              }
+
+              var physicalAll = parseInt(physicalDmg);
+              var magicAll = parseInt(magicDmg);
+
+
+              if(hitMonster && monsters[j].health>0){
+                //Knockback
+                var dx = players[i].x-monsters[j].x;
+                var dy = players[i].y-monsters[j].y;
+                monsters[j].x += -Math.sign(dx)*10;
+                monsters[j].y += -Math.sign(dy)*10;
+                monsters[j].health-=physicalAll+magicAll;
+              
+                if(lifeSteal>0 && players[i].health<players[i].maxHealth){
+                  players[i].health += parseInt((physicalAll+magicAll)*lifeSteal);
+                }
+              
+                io.to(players[i].id).emit("damageParticle",{damage:(physicalAll+magicAll),type:"physical",as:"attacker",at:[monsters[j].x,monsters[j].y]});
+                io.to(players[i].id).emit("sounds",{sound:"swordclang"});
+              }
+
+            }
           }
         }
         break;
@@ -725,7 +1002,7 @@ function newConnection(socket){
             var isThereSameItem = false;
             for(var k=0;k<players[j].inventory.length;k++){
               if(players[j].inventory[k]==null){continue;}
-              if(players[j].inventory[k].name == droppedItems[i].name){
+              if(players[j].inventory[k].name == droppedItems[i].name && !players[j].inventory[k].hasOwnProperty("slotNumber")){
                 isThereSameItem = true;
                 players[j].inventory[k].pieces+=droppedItems[i].pieces;
                 itemPickedUp=true;
@@ -772,7 +1049,6 @@ function newConnection(socket){
     var players = maps[data.map].players;
     for(var i=0;i<players.length;i++){
       if(socket.id == players[i].id){
-        console.log("acceptedQuest: "+data.questId);
         if(players[i].availableQuests.indexOf(data.questId)>-1){
           players[i].acceptedQuests.push(data.questId);
           players[i].availableQuests.splice(players[i].availableQuests.indexOf(data.questId),1);
@@ -787,6 +1063,19 @@ function newConnection(socket){
           //Not available quest was accepted, shouldn't happen
         }
         break;
+      }
+    }
+  }
+
+  socket.on("inventorySwap",inventorySwap);
+  function inventorySwap(data){
+    var players = maps[data.map].players;
+    for(var i=0;i<players.length;i++){
+      if(players[i].id == socket.id){
+        var temp = players[i].inventory[data.from];
+        players[i].inventory[data.from] = players[i].inventory[data.to];
+        players[i].inventory[data.to] = temp;
+        return;
       }
     }
   }
@@ -813,11 +1102,17 @@ function newConnection(socket){
 
           players[i].inventory[indexAvailable]=players[i].equipment[data.index];
           players[i].equipment[data.index] = null;
-          refreshBaseStats(i,data.map);
+          //refreshBaseStats(i,data.map);
         }
         else if(data.place == "inventory"){
-
+          
           if(players[i].inventory[data.index] == null){return;}
+
+          if(players[i].inventory[data.index].hasOwnProperty("cooldown") && players[i].inventory[data.index].cooldown>0){return;}
+
+          if(players[i].inventory[data.index].hasOwnProperty("cooldown")){
+            players[i].inventory[data.index].cooldown = players[i].inventory[data.index].baseCooldown;
+          }
 
           if(players[i].inventory[data.index].slotNumber!=undefined){
             if(players[i].equipment[players[i].inventory[data.index].slotNumber]!=null){
@@ -832,19 +1127,59 @@ function newConnection(socket){
               //delete from the slot
               players[i].inventory[data.index] = null;
             }
-            refreshBaseStats(i,data.map);
+            //refreshBaseStats(i,data.map);
             return;
           }
-          //Not interactable items
-          
-          if(players[i].inventory[data.index].name == "apple"){
-            players[i].health = players[i].health+20;
-            if(players[i].health>players[i].maxHealth){players[i].health = players[i].maxHealth;}
+
+
+          if(itemClass.useAbilityItem(players[i].inventory[data.index],players[i],maps[data.map].monsters,players,io)){
             if(players[i].inventory[data.index].pieces == 1){
               players[i].inventory[data.index] = null;
               return;
             }else{
               players[i].inventory[data.index].pieces--;
+              //Add cooldown
+              if(players[i].inventory[data.index].hasOwnProperty("baseCooldown")){
+                players[i].inventory[data.index].cooldown = players[i].inventory[data.index].baseCooldown;
+              }else{
+                players[i].inventory[data.index].cooldown = 3;
+              }
+            }
+            return;
+          }
+
+
+          //Consumables
+          if(players[i].inventory[data.index].name == "apple"){
+            players[i].abilityAnimationFrame=0;
+            players[i].abilityAnimationImg = "character_heal.png";
+            io.to(players[i].id).emit("sounds",{file:"sound/character_heal.wav"});
+            players[i].health = players[i].health+20;
+            if(players[i].health>players[i].maxHealth){players[i].health = players[i].maxHealth;}
+            //Remove item
+            if(players[i].inventory[data.index].pieces == 1){
+              players[i].inventory[data.index] = null;
+              return;
+            }else{
+              players[i].inventory[data.index].pieces--;
+              //Add cooldown
+              players[i].inventory[data.index].cooldown = 5;
+            }
+          }
+
+          if(players[i].inventory[data.index].name == "present"){
+            players[i].buffs.push({lifespan:20,attribute:"moveSpeed",value:2});
+            players[i].abilityAnimationFrame=0;
+            players[i].abilityAnimationImg = "character_speedup.png";
+            io.to(players[i].id).emit("sounds",{file:"sound/character_heal.wav"});
+            //Remove item
+            if(players[i].inventory[data.index].pieces == 1){
+              players[i].inventory[data.index] = null;
+              return;
+            }else{
+              players[i].inventory[data.index].pieces--;
+              //Add cooldown
+              players[i].inventory[data.index].cooldown = 5;
             }
           }
 
@@ -888,6 +1223,7 @@ function newConnection(socket){
                     }
                   }
                   */
+                  if(players[i].equipment[0].description==undefined){players[i].equipment[0].description=[];}
                   players[i].equipment[0].description.push("+"+swordProperties[p]+" "+players[i].inventory[data.index][swordProperties[p]]);
                 }
                 else{
@@ -924,13 +1260,12 @@ function newConnection(socket){
         if(item!=null){
           
           //droppingItem = {id:itemIds++, x:players[i].x+30,y:players[i].y+10,equipment:item.equipment, name:item.name, iconNumber:item.iconNumber,pieces:1};
-          droppingItem = {x:players[i].x+30,y:players[i].y+10, pieces:1};
+          droppingItem = {x:players[i].x+30,y:players[i].y+10, pieces:1, id:itemIds++};
           // Add all item properties!!
 
           for(var key in item) {
             var value = item[key];
             if(key == "id"){
-              droppingItem.id = itemIds++;
               continue;
             }
             if(key == "pieces"){
@@ -1014,7 +1349,7 @@ function newConnection(socket){
                   //Speechbubble with questInteraction text
                   //Give item to player
                   for(var l = 0;l<selectedNPC.questInteractions[k].items.length;l++){
-                    giveItem(selectedNPC.questInteractions[k].items[l],players[i],data.map);
+                    giveItem(Object.assign({},selectedNPC.questInteractions[k].items[l]),players[i],data.map);
                   }
                   socket.emit("checkQuest",{successful:false,answer:selectedNPC.questInteractions[k].text});
                   //Note that item was received
@@ -1210,7 +1545,12 @@ function newConnection(socket){
     var droppedItems = maps[data.map].droppedItems;
     for(var i=0;i<players.length;i++){
       if(socket.id == players[i].id){
-        droppedItems.push({id:itemIds++, equipment:data.equipment, x: players[i].x+40, y: players[i].y, name:data.name, iconNumber:data.iconNumber, pieces:data.pieces});
+        if(players[i].name!="qw"){
+          socket.emit("damageParticle",{as:"victim",type:"physical",damage:"You don't have permission to do this."});
+        }else{
+          droppedItems.push({id:itemIds++, equipment:data.equipment, x: players[i].x+40, y: players[i].y, name:data.name, iconNumber:data.iconNumber, pieces:data.pieces});
+        
+        }
         break;
       }
     }

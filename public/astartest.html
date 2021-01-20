@@ -1,0 +1,226 @@
+<html>
+    <head></head>
+<body>
+    <canvas id="myCanvas">:/</canvas>
+<script>
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+
+var WIDTH = canvas.width = 1000;
+var HEIGHT = canvas.height = 600;
+
+
+var layers = [];
+var layerContents = [];
+var mapWidth = 0;
+var mapHeight = 0;
+var cellSize = 5;
+
+
+var x = new XMLHttpRequest();
+x.overrideMimeType('application/xml');
+x.open("GET", "http://"+window.location.hostname+":80/tiled/map1.tmx", true);
+//x.open("GET", "http://"+window.location.hostname+":80/tiled/underworld.tmx", true);
+x.onreadystatechange = function () {
+  if (x.readyState == 4 && x.status == 200)
+  {
+    doc = x.responseXML;
+    tilesets = doc.getElementsByTagName("tileset").length;
+    layers = doc.getElementsByTagName("layer").length;
+    mapWidth = doc.children[0].getAttribute("width");
+    mapHeight = doc.children[0].getAttribute("height");
+    //mapWidth = 10;
+    //mapHeight = 10;
+    
+    for(var i=0;i<layers;i++){
+        console.log(doc);
+
+        layerContents.push(doc.getElementById(""+(i+1)).children[0].innerHTML.replace(/\r?\n|\r/g,""));
+        layerContents[i]=layerContents[i].split(",");
+    }
+
+    startLoad();
+
+  }
+};
+x.send(null);
+function Spot(a,b){
+    this.x = a;
+    this.y = b;
+    this.f = 0;
+    this.g = 0;
+    this.h = 0;
+    this.previous = undefined;
+    this.neighbors = [];
+    this.addNeighbors = function(grid){
+        if(this.x>0){
+            this.neighbors.push(grid[this.x-1][this.y]);
+        }
+        if(this.x<mapWidth-1){
+            this.neighbors.push(grid[this.x+1][this.y]);
+        }
+        if(this.y>0){
+            this.neighbors.push(grid[this.x][this.y-1]);
+        }
+        if(this.y<mapHeight-1){
+            this.neighbors.push(grid[this.x][this.y+1]);
+        }
+
+    }
+}
+
+var grid = [];
+
+
+var openSet = [];
+var path = [];
+
+var closedSet = [];
+var start, end, loop;
+
+function startLoad(){
+    grid = new Array(mapWidth);
+    for(var i=0;i<mapWidth;i++){
+        grid[i] = new Array(mapHeight);
+    }
+    for(var i=0;i<mapWidth;i++){
+        for(var j=0;j<mapHeight;j++){
+            grid[i][j] = new Spot(i,j);
+        }
+    }
+    for(var i=0;i<mapWidth;i++){
+        for(var j=0;j<mapHeight;j++){
+            grid[i][j].addNeighbors(grid);
+        }
+    }
+    
+    start = grid[4][4];
+    end = grid[29][25];
+
+    openSet.push(start);
+    
+    loop = setInterval(update,10);
+
+}
+
+var test = 0;
+
+function update(){
+    ctx.fillStyle = "gray";
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+
+    ctx.strokeStyle = "black";
+
+    for(var i=0;i<mapWidth;i++){
+        for(var j=0;j<mapHeight;j++){
+            if(layerContents[2][j*mapWidth+i]!=0 && layerContents[1][j*mapWidth+i]==0){
+                ctx.fillStyle = "white";
+                ctx.fillRect(i*cellSize,j*cellSize,cellSize,cellSize);
+            }
+            if(grid[i][j]==end){
+                ctx.fillStyle = "yellow";
+                ctx.fillRect(i*cellSize,j*cellSize,cellSize,cellSize);
+            }
+            ctx.strokeRect(i*cellSize,j*cellSize,cellSize,cellSize);
+            
+        }
+    }
+
+    ctx.fillStyle = "lime";
+    for(var i=0;i<openSet.length;i++){
+        ctx.fillRect(openSet[i].x*cellSize, openSet[i].y*cellSize, cellSize, cellSize);
+    }
+
+    ctx.fillStyle = "green";
+    for(var i=0;i<closedSet.length;i++){
+        ctx.fillRect(closedSet[i].x*cellSize, closedSet[i].y*cellSize, cellSize, cellSize);
+    }
+    ctx.fillStyle = "purple";
+    for(var i = 0;i<path.length;i++){
+        ctx.fillRect(path[i].x*cellSize, path[i].y*cellSize, cellSize, cellSize);
+    }
+
+    while(openSet.length>0 && path.length==0){
+        if(openSet.length==0){
+            console.log("no solution");
+            break;
+        }
+        var winner = 0;
+        for(var i=0;i<openSet.length;i++){
+            if(openSet[i].f < openSet[winner].f){
+                winner = i;
+            }
+        }
+        var current = openSet[winner];
+        if(current == end){
+
+            path = [];
+            var temp = current;
+            path.push(temp);
+            while(temp.previous){
+                path.push(temp.previous);
+                temp = temp.previous;
+            }
+
+            console.log("done");
+        }
+        openSet.splice(winner,1);
+        closedSet.push(current);
+        for(var i=0;i<current.neighbors.length;i++){
+            if(!closedSet.includes(current.neighbors[i]) && !(layerContents[2][current.neighbors[i].y*mapWidth+current.neighbors[i].x]!=0 && layerContents[1][current.neighbors[i].y*mapWidth+current.neighbors[i].x]==0)){
+                var tempG = current.g+1;
+
+                if(openSet.includes(current.neighbors[i])){
+                    if(tempG< current.neighbors[i].g){
+                        current.neighbors[i].g = tempG;
+                    }
+                }else{
+                    current.neighbors[i].g = tempG;
+                    openSet.push(current.neighbors[i]);
+                    
+                }
+                current.neighbors[i].h = Math.abs(current.neighbors[i].x-end.x)+Math.abs(current.neighbors[i].y-end.y);
+                current.neighbors[i].f = current.neighbors[i].g + current.neighbors[i].h;
+                current.neighbors[i].previous = current;
+            }
+        }
+
+    }
+    //else{
+        // no solution
+        // console.log("no solution");
+    //}
+
+}
+
+function changePoint(evt){
+    var rect = canvas.getBoundingClientRect();
+    var mouseX = evt.clientX - rect.left;
+    var mouseY = evt.clientY - rect.top;
+    var i = Math.floor(mouseX/cellSize);
+    var j = Math.floor(mouseY/cellSize);
+    if(layerContents[2][j*mapWidth+i]!=0 && layerContents[1][j*mapWidth+i]==0){
+        alert("that's a wall");
+        return;
+    }
+    test = 0;
+    if(evt.shiftKey){
+        end = grid[i][j];
+        openSet = [start];
+        closedSet = [];
+        path = [];
+    }else{
+        start = grid[i][j];
+        openSet = [start];
+        closedSet = [];
+        path = [];
+    }
+}
+
+
+canvas.addEventListener("mousedown",changePoint);
+
+
+</script>
+</body>
+</html>

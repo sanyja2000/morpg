@@ -1,8 +1,21 @@
 var dialogBoxImage = new Image();
-dialogBoxImage.src = "img/dialogbox_new.png";
+dialogBoxImage.src = "img/dialogbox_wood.png";
 
 var NPCImage = new Image();
 NPCImage.src = "img/npcs6.png";
+
+var nextDialogImg = new Image();
+nextDialogImg.src = "img/next_arrow_animation.png";
+
+var dialogAccDecImg = new Image();
+dialogAccDecImg.src = "img/dialogbox_accdec.png";
+
+var dialogCloseImg = new Image();
+dialogCloseImg.src = "img/dialogbox_close.png";
+
+var talkSound = new Audio();
+talkSound.src = "sound/talksound2.wav";
+talkSound.volume = 0.2;
 
 var currentPlayerQuests = [];
 
@@ -58,6 +71,8 @@ new Quest(6,"EVEN MORE gems!",
 
 
 
+var displayedTextLength = 0;
+
 function drawDialogBox(npcname, quest){
     ctx.textAlign = "left";
     ctx.drawImage(dialogBoxImage, WIDTH/2-160,HEIGHT-200);
@@ -81,29 +96,94 @@ function drawDialogBox(npcname, quest){
 }
 
 function drawNewDialogBox(npcname){
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
-    ctx.fillRect(WIDTH/2-158,HEIGHT-198,320,128)
-    ctx.textAlign = "left";
-    ctx.drawImage(dialogBoxImage, WIDTH/2-160,HEIGHT-200);
+    
+    //ctx.fillStyle = "rgba(0,0,0,0.4)";
+    //ctx.fillRect(WIDTH/2-158,HEIGHT-198,320,128)
+    ctx.textAlign = "center";
+    ctx.drawImage(dialogBoxImage, parseInt(WIDTH/2)-240,HEIGHT-200);
     ctx.font = "14px rubbero";
-    ctx.fillStyle = "rgb(166,132,100)";
-    ctx.fillRect(WIDTH/2-142,HEIGHT-200,npcname.length*9,30);
+    //ctx.fillStyle = "rgb(166,132,100)";
+    //ctx.fillRect(WIDTH/2-142,HEIGHT-200,npcname.length*9,30);
     ctx.fillStyle = "black";
-    ctx.fillText(npcname,WIDTH/2-140,HEIGHT-186);
+    ctx.fillText(npcname,parseInt(WIDTH/2)-174,HEIGHT-97);
     ctx.font = "12px arial";
+    ctx.textAlign = "left";
     if(currentNPC.currentQuest !=0){
-        ctx.fillText(currentNPC.currentQuest.name, WIDTH/2-140,HEIGHT-170);    
+        ctx.fillText(currentNPC.currentQuest.name, parseInt(WIDTH/2)-100,HEIGHT-160);    
     }
-    ctx.font = "11px courier";
+    ctx.font = "13px courier bold";
 
+    ctx.fillStyle = "rgb(100,30,30)";
     //draw the 4 lines
+
+    var textLength = 0;
+    var drawnTextLength = 0;
     if(dialogBoxText.length>currentNPCPage*4+4){
         for(var i=currentNPCPage*4;i<currentNPCPage*4+4;i++){
-            ctx.fillText(dialogBoxText[i], WIDTH/2-140,HEIGHT-145+(i-currentNPCPage*4)*15);
+            //Count the display all text length
+            textLength += dialogBoxText[i].length;
         }
+        if(displayedTextLength<textLength){
+            //Display more text
+            //TODO add play sound here
+            displayedTextLength++;
+            if(displayedTextLength%4==0){
+                talkSound.currentTime = 0;
+                talkSound.play();
+            }
+        }
+        
+        for(var i=currentNPCPage*4;i<currentNPCPage*4+4;i++){
+            if(drawnTextLength+dialogBoxText[i].length>displayedTextLength){
+                //If we need to draw parts of line
+                ctx.fillText(dialogBoxText[i].substring(0,displayedTextLength-drawnTextLength), parseInt(WIDTH/2)-100,HEIGHT-130+(i-currentNPCPage*4)*17);
+                break;
+            }else{
+                //If we can draw the full line
+                ctx.fillText(dialogBoxText[i], parseInt(WIDTH/2)-100,HEIGHT-130+(i-currentNPCPage*4)*17);
+                drawnTextLength+=dialogBoxText[i].length;
+            }
+        }
+        ctx.drawImage(nextDialogImg, (parseInt(gameFrameCount/6)%12)*11, 0, 11, 20,  parseInt(WIDTH/2)+180, HEIGHT-55,11,20);
     }else{
+        /*
         for(var i=currentNPCPage*4;i<dialogBoxText.length;i++){
-            ctx.fillText(dialogBoxText[i], WIDTH/2-140,HEIGHT-145+(i-currentNPCPage*4)*15);
+            ctx.fillText(dialogBoxText[i], parseInt(WIDTH/2)-100,HEIGHT-130+(i-currentNPCPage*4)*17);
+        }
+        */
+        for(var i=currentNPCPage*4;i<dialogBoxText.length;i++){
+        //Count the display all text length
+            textLength += dialogBoxText[i].length;
+        }
+        if(displayedTextLength<textLength){
+            //Display more text
+            //TODO add play sound here
+            displayedTextLength++;
+
+            if(displayedTextLength%4==0){
+                talkSound.currentTime = 0;
+                talkSound.play();
+            }
+
+        }
+        
+        for(var i=currentNPCPage*4;i<dialogBoxText.length;i++){
+            if(drawnTextLength+dialogBoxText[i].length>displayedTextLength){
+                //If we need to draw parts of line
+                ctx.fillText(dialogBoxText[i].substring(0,displayedTextLength-drawnTextLength), parseInt(WIDTH/2)-100,HEIGHT-130+(i-currentNPCPage*4)*17);
+                break;
+            }else{
+                //If we can draw the full line
+                ctx.fillText(dialogBoxText[i], parseInt(WIDTH/2)-100,HEIGHT-130+(i-currentNPCPage*4)*17);
+                drawnTextLength+=dialogBoxText[i].length;
+            }
+        }       
+
+
+        if(!customDialog){
+            ctx.drawImage(dialogAccDecImg, parseInt(WIDTH/2)-240,HEIGHT-200);
+        }else{
+            ctx.drawImage(dialogCloseImg, parseInt(WIDTH/2)-240,HEIGHT-200);
         }
     }
 

@@ -43,7 +43,9 @@
         <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
         <script src="js/inventory.js"></script>
         <script src="js/quest.js"></script>
+        <script src="js/questlog.js"></script>
         <script src="js/snowflake.js"></script>
+        <script src="js/lights.js"></script>
         <title>MORPG</title>
     </head>
     <body>
@@ -100,6 +102,7 @@ var keysDown = [];
 var playerHealth = 100;
 var playerMaxHealth = 100;
 
+
 //AUDIO IMPORT START
 
 var newWorldSound = new Audio();
@@ -133,6 +136,10 @@ swordClangSound.volume = 0.2;
 var swordWhooshSound = new Audio();
 swordWhooshSound.src = "sound/swordwhoosh.wav";
 swordWhooshSound.volume = 0.1;
+
+var bowWhooshSound = new Audio();
+bowWhooshSound.src = "sound/arrowRelease.wav";
+bowWhooshSound.volume = 0.1;
 
 var hurtSound = new Audio();
 hurtSound.src = "sound/hurt.wav";
@@ -208,9 +215,27 @@ for(var i=3;i<7;i++){
     pImg.src = "img/character_sword"+i+".png";
     playerSwordImgs.push(pImg);
 }
+var playerBowImgs = [];
+for(var i=3;i<7;i++){
+    var pImg = new Image();
+    pImg.src = "img/character_bow"+i+".png";
+    playerBowImgs.push(pImg);
+}
+
+
+var playerAbilityAnimation = ["",-1];
+var playerAnimationFiles = ["character_whirlwind.png","character_heal.png","character_speedup.png"];
+var playerAnimationImgs = [];
+
+for(var i=0;i<playerAnimationFiles.length;i++){
+    var pImg = new Image();
+    pImg.src = "img/animations/"+playerAnimationFiles[i];
+    playerAnimationImgs.push(pImg)
+}
 
 //PLAYER IMAGE IMPORT END
-
+var cursorImg = new Image();
+cursorImg.src = "img/cursor_idle.png";
 
 var playerName = "";
 var playerSkin = 0;
@@ -235,7 +260,7 @@ var respawnTimer = -1;
 var acceptedQuestIds = [];
 
 var monsters = [];
-var monsterFiles = ["img/ghost.png","img/pumpkivern.png","img/elf1.png"];
+var monsterFiles = ["img/enemies/ghost.png","img/enemies/lebego_lofasz_koponya.png","img/enemies/pumpkivern.png","img/enemies/elf1.png","img/enemies/elf2.png","img/enemies/rabbit.png","img/enemies/reindeer.png","img/enemies/cat_relax.png"];
 var monsterImgs = [];
 
 
@@ -303,6 +328,8 @@ var projectiles = [];
 
 var projectileImg = new Image();
 projectileImg.src = "img/projectiles/ball_projectiles.png";
+
+
 
 function drawProjectile(projectile){
     ctx.drawImage(projectileImg,14*projectile.color,0,14,14,projectile.x-viewportX,projectile.y-viewportY,14,14);
@@ -376,6 +403,8 @@ function loadingScreenUpdate(tpPoint){
     ctx.font = "15px Arial";
     ctx.fillText("Loading...",WIDTH/6,HEIGHT/2+25);
     loadingScreenOffset += 0.08;
+
+    //TODO show tip
 }
 
 var loadingScreenLoop;
@@ -386,7 +415,7 @@ var loadingScreenImage;
 function changeToMap(tpPoint){
     clearInterval(gameloop);
     
-    //TODO new interval->loading animation
+    //TODO
     //+ new map -> new music, play with setInterval
 
     loadingScreenOffset = 0;
@@ -396,6 +425,9 @@ function changeToMap(tpPoint){
 
     socket.emit("changeToMap",{from:currentMap,to:tpPoint.toMap});
     currentMap = tpPoint.toMap;
+
+    //TODO: rework this crap ||
+    //         !!!           \/
     if(tpPoint.toMap==1){
         
         x.open("GET", "http://"+window.location.hostname+":80/tiled/underworld.tmx", true);
@@ -587,12 +619,15 @@ function updateData(data){
       acceptedQuestIds = players[i].acceptedQuests;
       playerHealth = players[i].health;
       playerMaxHealth = players[i].maxHealth;
+      playerAbilityAnimation = [players[i].abilityAnimationImg, players[i].abilityAnimationFrame];
       respawnTimer = players[i].respawnTimer;
       monsters = data.monstersArr;
       moveSpeed = players[i].moveSpeed;
       projectiles = data.projectileArr;
       doors = data.doorsArr;
       chests = data.chestsArr;
+      lightSystem.daytime = data.daytime;
+      //console.log(data.daytime);
       break;
     }
   }
@@ -724,6 +759,8 @@ function update(){
 
     //Draw Monsters
 
+    monsters.sort((a,b)=>(a.y+a.h)-(b.y+b.h));
+
     for(var i=0;i<monsters.length;i++){
         var imgIndex = monsterFiles.indexOf(monsters[i].image);
         if(imgIndex == -1){continue;}
@@ -740,10 +777,10 @@ function update(){
 
         ctx.beginPath();
         ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.ellipse(monsters[i].x-viewportX+monsters[i].w/2,monsters[i].y-viewportY+monsters[i].h-5, monsters[i].w/2, 5, 0, 0, Math.PI*2);
+        ctx.ellipse(monsters[i].x-viewportX+monsters[i].w/2,monsters[i].y-viewportY+monsters[i].h-monsters[i].h/8+2, monsters[i].w/2, monsters[i].h/8, 0, 0, Math.PI*2);
         ctx.fill();
         ctx.closePath();
-        ctx.drawImage(monsterImgs[imgIndex],(parseInt(gameFrameCount/20)%monsters[i].frames)*monsters[i].w,monsters[i].h*monsters[i].facing,monsters[i].w,monsters[i].h,monsters[i].x-viewportX,monsters[i].y-viewportY,monsters[i].w,monsters[i].h);
+        ctx.drawImage(monsterImgs[imgIndex],(parseInt(gameFrameCount/10)%monsters[i].frames)*monsters[i].w,monsters[i].h*monsters[i].facing,monsters[i].w,monsters[i].h,parseInt(monsters[i].x-viewportX),parseInt(monsters[i].y-viewportY),monsters[i].w,monsters[i].h);
 
     }
 
@@ -815,20 +852,24 @@ function update(){
           ctx.fillText(players[i].health,players[i].x-viewportX+12,players[i].y-viewportY-4);
           ctx.restore();
           if(players[i].playerHitting>0){
+                var playerAttackImgs = playerSwordImgs;
+                if(players[i].equipment[0]!=null && players[i].equipment[0].name.indexOf("bow")>-1){
+                    playerAttackImgs = playerBowImgs;
+                }
                 if(moveDirection[1] == -1){ //UP
-                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*0,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                    ctx.drawImage(playerAttackImgs[players[i].skin],39*(4-players[i].playerHitting),37*0,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
                 }
                 else if(moveDirection[1] == 1){ //DOWN
-                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*2,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                    ctx.drawImage(playerAttackImgs[players[i].skin],39*(4-players[i].playerHitting),37*2,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
                 }
                 else if(moveDirection[0] == -1){ //LEFT
-                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*3,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                    ctx.drawImage(playerAttackImgs[players[i].skin],39*(4-players[i].playerHitting),37*3,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
                 }
                 else if(moveDirection[0] == 1){ //RIGHT
-                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*1,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                    ctx.drawImage(playerAttackImgs[players[i].skin],39*(4-players[i].playerHitting),37*1,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
                 }
                 else if(moveDirection[0] == 0 && moveDirection[1] == 0){
-                    ctx.drawImage(playerSwordImgs[players[i].skin],39*(4-players[i].playerHitting),37*players[i].facing,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
+                    ctx.drawImage(playerAttackImgs[players[i].skin],39*(4-players[i].playerHitting),37*players[i].facing,39,37,players[i].x-viewportX-7,players[i].y-viewportY,39,37);
                 }
             }
             else{
@@ -848,6 +889,11 @@ function update(){
                     ctx.drawImage(playerSkinImgs[players[i].skin],25,37*players[i].facing,25,37,players[i].x-viewportX,players[i].y-viewportY,25,37);
                 }
             }
+
+            if(players[i].abilityAnimationFrame!=-1){
+                ctx.drawImage(playerAnimationImgs[playerAnimationFiles.indexOf(players[i].abilityAnimationImg)],75*players[i].abilityAnimationFrame,0,75,111,players[i].x-25-viewportX,players[i].y-37-viewportY,75,111);
+            }
+
             ctx.globalAlpha = 1;
     }
 
@@ -890,20 +936,24 @@ function update(){
     ctx.fillText(playerHealth,playerX-viewportX+12,playerY-viewportY-8);
 
     if(playerHitting>0){
+        var playerAttackImgs = playerSwordImgs;
+        if(pInventory.equipment[0]!=null && pInventory.equipment[0].name.indexOf("bow")>-1){
+            playerAttackImgs = playerBowImgs;
+        }
         if(moveDirection[1] == -1){ //UP
-            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*0,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+            ctx.drawImage(playerAttackImgs[playerSkin],39*(4-playerHitting),37*0,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
         }
         else if(moveDirection[1] == 1){ //DOWN
-            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*2,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+            ctx.drawImage(playerAttackImgs[playerSkin],39*(4-playerHitting),37*2,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
         }
         else if(moveDirection[0] == -1){ //LEFT
-            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*3,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+            ctx.drawImage(playerAttackImgs[playerSkin],39*(4-playerHitting),37*3,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
         }
         else if(moveDirection[0] == 1){ //RIGHT
-            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*1,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
+            ctx.drawImage(playerAttackImgs[playerSkin],39*(4-playerHitting),37*1,39,37,playerX-viewportX-7,playerY-viewportY,39,37);
         }
         else if(moveDirection[0] == 0 && moveDirection[1] == 0){
-            ctx.drawImage(playerSwordImgs[playerSkin],39*(4-playerHitting),37*playerFacing,39,37,playerDrawX-viewportX-7,playerDrawY-viewportY,39,37);
+            ctx.drawImage(playerAttackImgs[playerSkin],39*(4-playerHitting),37*playerFacing,39,37,playerDrawX-viewportX-7,playerDrawY-viewportY,39,37);
         }
     }
     else if(playerCanMove){
@@ -926,17 +976,18 @@ function update(){
         ctx.drawImage(playerSkinImgs[playerSkin],25,37*0,25,37,playerDrawX-viewportX,playerDrawY-viewportY,25,37);
     }
 
+
+    //Draw ability animation
+    if(playerAbilityAnimation[1]!=-1){
+        ctx.drawImage(playerAnimationImgs[playerAnimationFiles.indexOf(playerAbilityAnimation[0])],75*playerAbilityAnimation[1],0,75,111,playerDrawX-25-viewportX,playerDrawY-37-viewportY,75,111);
+    }
+
+
     //Draw snowflakes :D
     if(currentMap == 0){
         snowflakeAnimation();
     }
 
-
-    //Draw HUD
-    pInventory.drawHUD();
-    if(inDialogBox){
-            drawNewDialogBox(currentNPC.name);
-    }
 
     //Draw damage particles 
 
@@ -947,6 +998,21 @@ function update(){
             i--;
         }
     }
+
+    //Draw lights
+    lightSystem.draw(ctx);
+
+    //Draw HUD
+    pInventory.drawHUD();
+    if(inDialogBox){
+            drawNewDialogBox(currentNPC.name);
+    }
+    if(pQuestlog.visible)
+    {   
+        pQuestlog.draw();
+    }
+
+    
 
     //Draw map name
     if(mapNameOpacity>0.5){
@@ -1003,7 +1069,8 @@ function update(){
     //Draw settings menu button
     ctx.drawImage(settingsMenuImage,WIDTH-30,6);
 
-    
+    //Draw cursor
+    //ctx.drawImage(cursorImg,mouseX,mouseY);
 
 
     //Update Physics
@@ -1098,7 +1165,9 @@ function handleKeyDown(evt){
     if(evt.keyCode==87){moveDirection[1]=-1;playerFacing=0;if(keysDown.indexOf(87)==-1){keysDown.push(87);}} // Up
     if(evt.keyCode==68){moveDirection[0]=1;playerFacing=1;if(keysDown.indexOf(68)==-1){keysDown.push(68);}} // Right
     if(evt.keyCode==83){moveDirection[1]=1;playerFacing=2;if(keysDown.indexOf(83)==-1){keysDown.push(83);}} // Down
-    if(evt.keyCode==80){console.log("Position: "+playerX+", "+playerY);} //P key
+    if(evt.keyCode==80){
+        console.log("Player Position: "+playerX+", "+playerY+"\n"+"Local Mouse position: "+mouseX+", "+mouseY+"\nWorld mouse position: "+(viewportX-mouseX)+", "+(viewportY-mouseY));
+    } //P key
     //console.log(evt.keyCode);
 
     
@@ -1116,6 +1185,7 @@ function handleKeyDown(evt){
             if(evt.keyCode == 32){ //space key
                 if(currentNPCPage*4+4<dialogBoxText.length){
                     currentNPCPage++;
+                    displayedTextLength=0;
                     dialogBubbleSound.play();
                 }
             }
@@ -1126,7 +1196,7 @@ function handleKeyDown(evt){
             //By QuestID
             if(currentNPCPage*4+4<dialogBoxText.length){
                 
-                
+                displayedTextLength = 0;
                 //dialogBoxText = currentNPC.currentQuest.text.slice(currentNPCPage*4,currentNPCPage*4+4);
                 
                 currentNPCPage++;
@@ -1160,13 +1230,22 @@ function handleKeyDown(evt){
         if(evt.keyCode == 32){
             if(playerHitting==0 && pInventory.equipment[0] != null){
                 playerHitting = 3;
-                swordWhooshSound.currentTime = 0;
-                swordWhooshSound.play();
+                if(pInventory.equipment[0].name.indexOf("bow")>-1){
+                    bowWhooshSound.currentTime = 0;
+                    bowWhooshSound.play();
+                }
+                else{
+                    swordWhooshSound.currentTime = 0;
+                    swordWhooshSound.play();
+                }
                 socket.emit("attack",{direction:playerFacing, map:currentMap});
             }
         }
     }
     if(evt.keyCode==69){ //E key
+        if(!inDialogBox){
+            displayedTextLength = 0;
+        }
         for(var i=0;i<NPCs.length;i++){
             if(NPCs[i].checkPlayerCollision() == true){
             //Pressed next to npc
@@ -1179,6 +1258,7 @@ function handleKeyDown(evt){
         }
         for(var i=0;i<infoBoards.length;i++){
             if(infoBoards[i].checkPlayerCollision() == true){
+                pQuestlog.visible = false;
                 //Pressed next to infoboard
                 playerCanMove = false;
                 inDialogBox = true;
@@ -1193,6 +1273,7 @@ function handleKeyDown(evt){
             if(checkPlayerCollisionWithTpPoint(tpPoints[i]) == true && mapIsLoading == false){
                 // Pressed next to tpPoint, changing maps
                 // Replace with sail sound
+                pQuestlog.visible = false;
                 dialogBubbleSound.play();
                 mapIsLoading = true;
                 changeToMap(tpPoints[i]);
@@ -1236,6 +1317,12 @@ function handleKeyUp(evt){
         keysDown = [];
         return;
     }
+    if(evt.shiftKey){
+        console.log("evt keycode: "+evt.keyCode);
+    }
+    if(evt.keyCode == 79 && !inDialogBox){ // O key - quest log
+        pQuestlog.visible = !pQuestlog.visible;
+    }
     if(evt.keyCode==65){// Left
         keysDown.splice(keysDown.indexOf(65),1);
         if(keysDown.indexOf(68)>-1){moveDirection[0]=1;playerFacing=1;return;}
@@ -1270,7 +1357,7 @@ function handleKeyUp(evt){
     } 
     //console.log(evt.keyCode);
 
-    if(evt.keyCode<54 && evt.keyCode>48){
+    if(evt.keyCode<54 && evt.keyCode>48){ // 1-5 buttons
         if(pInventory.inventory[evt.keyCode-49]!=null){
             socket.emit("tryUse",{place:"inventory", index:evt.keyCode-49,map:currentMap});
         }
@@ -1281,6 +1368,7 @@ function handleKeyUp(evt){
 
 function checkQuest(data){
   dialogBubbleSound.play();
+  pQuestlog.visible = false;
   if(data.notAccepted == true){
       console.log("I shouldn't run.. there is a problem");
       inDialogBox = true;
@@ -1327,10 +1415,27 @@ function checkQuest(data){
 
 
 function mouseDown(evt){
+    mouseX = parseInt(evt.clientX/(scaleSize/tileSize));
+    mouseY = parseInt(evt.clientY/(scaleSize/tileSize));
     if(mouseX>WIDTH-30 && mouseY<30){
         toggleMusic();
         return;
     }
+
+    if(pQuestlog.visible){
+        //WIDTH/2-280,HEIGHT/2-145+i*40,157,34
+        if(mouseX>WIDTH/2-280 && mouseX<WIDTH/2-123){
+            for(var i=0;i<acceptedQuestIds.length;i++){
+                console.log("From: "+(HEIGHT/2-145+i*40)+" to: "+(HEIGHT/2-111+i*40));
+                if(mouseY>HEIGHT/2-145+i*40 && mouseY<HEIGHT/2-111+i*40){
+                    pQuestlog.highlightedQuest = i;
+                    break;
+                }
+            }
+        }
+        return;
+    }
+
     if(inventoryOpen){
         if(mouseY>HEIGHT-128 && mouseX>5*WIDTH/6-80 && mouseX<5*WIDTH/6-80+160){
             var x = parseInt((mouseX-5*WIDTH/6+80)/32);
@@ -1377,15 +1482,17 @@ function mouseDown(evt){
 }
 
 function mouseMove(evt){
-    canvas.style.cursor = "default";
+    //canvas.style.cursor = "none";
+    canvas.style.cursor = "url('img/cursor_idle32.png'),auto" ;
+    
     mouseX = parseInt(evt.clientX/(scaleSize/tileSize));
     mouseY = parseInt(evt.clientY/(scaleSize/tileSize));
     if(inventoryOpen){
         if(mouseY>HEIGHT-128 && mouseX>5*WIDTH/6-80 && mouseX<5*WIDTH/6-80+160){
-            canvas.style.cursor = "pointer";
+            //canvas.style.cursor = "pointer";
         }
         else if(mouseX>5*WIDTH/6+80 && mouseX<5*WIDTH/6+112 && mouseY>HEIGHT-130){
-            canvas.style.cursor = "pointer";
+            //canvas.style.cursor = "pointer";
         }
     }
 
@@ -1393,8 +1500,19 @@ function mouseMove(evt){
 }
 
 function mouseUp(evt){
-    
+    if(inventoryOpen){
+        if(mouseY>HEIGHT-128 && mouseX>5*WIDTH/6-80 && mouseX<5*WIDTH/6-80+160){
+            var x = parseInt((mouseX-5*WIDTH/6+80)/32);
+            var y = parseInt((mouseY-HEIGHT+128)/32);
+            var ind = y*5+x;
+            if(pInventory.highlightedItem != -1 && pInventory.highlightedItem!=ind){
+                socket.emit("inventorySwap",{from:pInventory.highlightedItem, to:ind, map:currentMap});
+            }
+        }
+    }    
 }
+
+
 function mouseDoubleClick(evt){
     if(inventoryOpen){
         if(mouseY>HEIGHT-128 && mouseX>5*WIDTH/6-80 && mouseX<5*WIDTH/6-80+160){

@@ -8,13 +8,22 @@ function monsterAttack(monster,projectilesArr,io,map){
         io.to(monster.target.id).emit("damageParticles",{as:"victim",type:"physical"});
         io.to(monster.target.id).emit("sounds",{sound:"hurt"});
             
-        console.log("Attacking as ghost");
+        //console.log("Attacking as ghost");
     }
     if(monster.type == "elf"){
-        //Basic melee enemy
+        //Basic shooter enemy
         var projectileSpeed = 8;
         var angle =  Math.atan2(monster.target.x-13-monster.x+monster.w/2,0*(monster.y+monster.h/2-monster.target.y-25))-Math.PI/2;
         projectilesArr.push({color:4,x:monster.x+monster.w/2,y:monster.y+monster.h/2,vX:Math.cos(angle)*projectileSpeed,vY:Math.sin(angle)*projectileSpeed,lifespan:60,physicalDmg:45});
+    }
+    if(monster.type == "elf2"){
+        //Basic shooter enemy 3 shots
+        var projectileSpeed = 8;
+        var angle =  Math.atan2(monster.target.x-13-monster.x+monster.w/2,0*(monster.y+monster.h/2-monster.target.y-25))-Math.PI/2;
+        var angleDiff = Math.PI/8;
+        for(var i=-1;i<2;i++){
+            projectilesArr.push({color:4,x:monster.x+monster.w/2,y:monster.y+monster.h/2,vX:Math.cos(angle+i*angleDiff)*projectileSpeed,vY:Math.sin(angle+i*angleDiff)*projectileSpeed,lifespan:60,physicalDmg:45});
+        }
     }
     if(monster.type == "shooter"){
         //Multiple phase enemy
@@ -55,6 +64,9 @@ function monsterAttack(monster,projectilesArr,io,map){
 
 
 function monsterWonder(monster){
+    if(monster.static){
+        return;
+    }
     if(parseInt(monster.x)!=monster.points[monster.pointCount][0] || parseInt(monster.y)!=monster.points[monster.pointCount][1]){
         var angle = Math.atan2(monster.y-monster.points[monster.pointCount][1],monster.x-monster.points[monster.pointCount][0]);
         var vx = Math.cos(angle)*Math.min(monster.moveSpeed,Math.abs(monster.x-monster.points[monster.pointCount][0]));

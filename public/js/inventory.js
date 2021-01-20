@@ -119,6 +119,9 @@ function playerInventory(){
             var line = parseInt(i/5);
             if(i==this.highlightedItem && inventoryOpen){
                 //highlight duhhh
+
+                
+
                 ctx.fillStyle = "rgba(255,165,0,0.7)";
                 ctx.fillRect(5*WIDTH/6-79+(i%5)*32,HEIGHT-9-this.offset+line*32,30,10);
             }
@@ -130,6 +133,20 @@ function playerInventory(){
                 ctx.textAlign = "center";
                 ctx.fillText(this.inventory[i].pieces,5*WIDTH/6-72+(i%5)*32+8,HEIGHT-2-this.offset+line*32);
                 ctx.restore();
+            }
+            if(this.inventory[i].hasOwnProperty("cooldown") && this.inventory[i].cooldown>0){
+                drawCooldown(5*WIDTH/6-77+(i%5)*32,HEIGHT-30-this.offset+line*32,this.inventory[i].baseCooldown,this.inventory[i].cooldown);
+
+                /*
+                ctx.save();
+                ctx.fillStyle = "rgba(0,0,0,0.3)";
+                ctx.font = "10px Arial";
+                ctx.textAlign = "center";
+                ctx.fillRect(5*WIDTH/6-79+(i%5)*32,HEIGHT-9-this.offset+line*32,30,10);
+                ctx.fillText(this.inventory[i].pieces,5*WIDTH/6-72+(i%5)*32+8,HEIGHT-2-this.offset+line*32);
+                ctx.restore();
+                */
+
             }
             
         }
@@ -192,3 +209,56 @@ function playerInventory(){
     };
 }
 var pInventory = new playerInventory();
+
+function clamp(n,min,max){
+    if(n<min){return min;}
+    if(n>max){return max;}
+    return n;
+}
+
+var tesztCD = 2;
+
+function drawCooldown(dx,dy,bcd,cd){
+
+    var angle = (1-cd/bcd)*Math.PI*2;
+    var w = 14;
+    var h = 10;
+    var r = Math.sqrt(w**2+h**2);
+    //angle = (angle+0.1)%(Math.PI*2);
+
+
+
+    ctx.fillStyle="rgba(0,0,0,0.3)";
+    ctx.beginPath();
+    ctx.moveTo(dx+w,dy+h);
+    var x = Math.cos(angle-Math.PI/2)*r;
+    var y = Math.sin(angle-Math.PI/2)*r;
+    ctx.lineTo(dx+w+clamp(x,-w,w),dy+h+clamp(y,-h,h));
+    if(angle<Math.PI/2){
+        ctx.lineTo(dx+w*2,dy);
+    }
+    if(angle<Math.PI){
+        ctx.lineTo(dx+w*2,dy+h*2);
+    }
+    if(angle<Math.PI*3/2){
+        ctx.lineTo(dx+0,dy+h*2);
+    }
+    if(angle<Math.PI*2){
+        ctx.lineTo(dx+0,dy);
+    }
+    ctx.lineTo(dx+w,dy);
+
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = "white";
+    ctx.font = "10px Arial";
+    ctx.textAlign = "center";
+    if(cd<10){
+        ctx.fillText(parseInt(cd*10)/10,dx+w,dy+h+2);
+    }
+    else{
+        ctx.fillText(parseInt(cd),dx+w,dy+h+2);
+    }
+
+}
