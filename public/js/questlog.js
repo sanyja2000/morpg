@@ -31,7 +31,7 @@ function QuestLog(){
 
 
 
-                for(var j=0;j<quests[i].text.length;j++){
+                for(var j=0;j<quests[acceptedQuestIds[i]].text.length;j++){
                     ctx.fillText(quests[acceptedQuestIds[i]].text[j],WIDTH/2-90,HEIGHT/2-130+j*16);
                 }
 

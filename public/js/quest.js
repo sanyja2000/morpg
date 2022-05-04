@@ -40,7 +40,7 @@ new Quest(0,"Welcome to the island",
   
 
   new Quest(2,"Let's get apples",
-  ["Hi there!","Do you love fresh apples?","Well, I do.","But as you can see, I have to","stand here and help the villagers.","There is a fruiterer","just around the corner","She's name is Sarah","Would you bring some apples from her?","I will give you 50 pennies.."],
+  ["Hi there!","Do you love fresh apples?","Well, I do.","But as you can see, I have to","stand here and help the villagers.","There is a fruiterer","just around the corner","Her name is Sarah","Would you bring some apples from her?","I will give you 50 pennies.."],
   [{name:"apple",pieces:4,equipment:false,iconNumber:33}]),
 
 

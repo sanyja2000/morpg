@@ -46,6 +46,7 @@
         <script src="js/questlog.js"></script>
         <script src="js/snowflake.js"></script>
         <script src="js/lights.js"></script>
+        <script src="js/debug.js"></script>
         <title>MORPG</title>
     </head>
     <body>
@@ -240,8 +241,11 @@ cursorImg.src = "img/cursor_idle.png";
 var playerName = "";
 var playerSkin = 0;
 
-var playerX = 250;
-var playerY = 200;
+//var playerX = 250;
+//var playerY = 200;
+var playerX = 1800;
+var playerY = 650;
+
 var viewportX = 0;
 var viewportY = 0;
 var droppedItems = [];
@@ -320,7 +324,7 @@ function checkPlayerCollisionWithTpPoint(tpPoint){
 }
 
 
-generateSnowflakes();
+//generateSnowflakes();
 
 var numberParticles = [];
 
@@ -425,18 +429,17 @@ function changeToMap(tpPoint){
 
     socket.emit("changeToMap",{from:currentMap,to:tpPoint.toMap});
     currentMap = tpPoint.toMap;
+    mapImage.src=mapImages[currentMap];
 
     //TODO: rework this crap ||
     //         !!!           \/
     if(tpPoint.toMap==1){
-        
         x.open("GET", "http://"+window.location.hostname+":80/tiled/underworld.tmx", true);
     }else if(tpPoint.toMap==2){
         x.open("GET", "http://"+window.location.hostname+":80/tiled/house1.tmx", true);
     }else if(tpPoint.toMap==3){
         x.open("GET", "http://"+window.location.hostname+":80/tiled/dungeon1.tmx", true);
-    }
-    else{
+    } else{
         x.open("GET", "http://"+window.location.hostname+":80/tiled/map1.tmx", true);
     }
     playerX = tpPoint.spawnX;
@@ -531,7 +534,7 @@ function processTilesets(){
 
 
     clearInterval(loadingScreenLoop);
-    gameloop = setInterval(update, 1000/60);
+    gameloop = setInterval(update, 1000/debugScreen.FPSlock);
     mapIsLoading = false;
     newWorldSound.play();
 
@@ -539,6 +542,7 @@ function processTilesets(){
         socket = io.connect("http://"+window.location.hostname+":80");
         socket.emit("loginInfo",{skin:playerSkin, name:playerName, map:currentMap});
         socket.on("updateData",updateData);
+        socket.on("pingForward",pingBack);
         socket.on("checkQuest",checkQuest);
         socket.on("sounds",playSound);
         socket.on("damageParticle",addDamageParticle);
@@ -553,6 +557,9 @@ function teleportPlayer(data){
     playerY = data.y;
 }
 
+function pingBack(){
+    socket.emit("pingBack",{map:currentMap});
+}
 
 function addDamageParticle(data){
     /*
@@ -627,6 +634,8 @@ function updateData(data){
       doors = data.doorsArr;
       chests = data.chestsArr;
       lightSystem.daytime = data.daytime;
+      lightSystem.lights = data.lightsArr;
+      debugScreen.ping = players[i].ping;
       //console.log(data.daytime);
       break;
     }
@@ -681,11 +690,30 @@ function drawTile(x,y,layer,n){
 var currentPlayerAnimationFrame = 0;
 var currentPlayerAnimationFrameD = 1;
 var gameFrameCount = 0;
+
+// DEBUG MODE ON
+
+var mapImages = ["tiled/map1.png","tiled/underworld.png","tiled/house1.png","tiled/dungeon1.png"]
+var mapImage = new Image();
+mapImage.src=mapImages[0];
+
+
+//
+
+
+
 function update(){
+
+    //Start framedebugging
+    debugScreen.startFrame();
+
+
     //Draw the tiles
     //From viewpoint
     ctx.fillStyle = "black";
     ctx.fillRect(0,0,WIDTH,HEIGHT);
+    
+    /*
     for(var i=0;i<layers;i++){
         for(var y = 0;y<mapHeight;y++){
             if(y<viewportY/tileSize-1 || y>viewportY/tileSize+HEIGHT/tileSize){
@@ -697,11 +725,16 @@ function update(){
                 }     
                 var ind = y*mapWidth+x;
                 //console.log(parseInt(layerContents[i][ind]));
+                if(parseInt(layerContents[i][ind])==0){
+                    continue;
+                }
                 drawTile(x,y,0,parseInt(layerContents[i][ind]));
             }
         }
         //ctx.drawImage(tilesetPics[i],0,0);
     }
+    */
+    ctx.drawImage(mapImage,viewportX,viewportY,WIDTH,HEIGHT,0,0,WIDTH,HEIGHT);
 
 
     
@@ -1069,6 +1102,12 @@ function update(){
     //Draw settings menu button
     ctx.drawImage(settingsMenuImage,WIDTH-30,6);
 
+
+    //Draw debug screen
+    if(debugScreen.visible){
+        debugScreen.draw(ctx);
+    }
+
     //Draw cursor
     //ctx.drawImage(cursorImg,mouseX,mouseY);
 
@@ -1119,13 +1158,17 @@ function update(){
         }
 
         //Add collision to the sides too
-
+        
+        var frameRateMultiplier = 1;
+        if(debugScreen.FPSlock == 30){
+            frameRateMultiplier = 2;
+        }
         if(moveDirection[0]!=0 && moveDirection[1]!=0){
-            playerX+= moveDirection[0]*moveSpeed[0]*0.7;
-            playerY+= moveDirection[1]*moveSpeed[1]*0.7;
+            playerX+= moveDirection[0]*moveSpeed[0]*0.7*frameRateMultiplier;
+            playerY+= moveDirection[1]*moveSpeed[1]*0.7*frameRateMultiplier;
         }else{
-            playerX+= moveDirection[0]*moveSpeed[0];
-            playerY+= moveDirection[1]*moveSpeed[1];
+            playerX+= moveDirection[0]*moveSpeed[0]*frameRateMultiplier;
+            playerY+= moveDirection[1]*moveSpeed[1]*frameRateMultiplier;
         }
         //update to server
         socket.emit("playerPos",{x:playerX, y:playerY,moveDir:moveDirection,playerHit:playerHitting,facing:playerFacing, map:currentMap});
@@ -1151,6 +1194,11 @@ function update(){
     }
 
     gameFrameCount++;
+
+    //End framedebugging
+    debugScreen.endFrame();
+
+
     //clearInterval(gameloop);
 }
 
@@ -1227,7 +1275,7 @@ function handleKeyDown(evt){
         }
     }
     else{
-        if(evt.keyCode == 32){
+        if(evt.keyCode == 32){ //SPACE key
             if(playerHitting==0 && pInventory.equipment[0] != null){
                 playerHitting = 3;
                 if(pInventory.equipment[0].name.indexOf("bow")>-1){
@@ -1311,6 +1359,19 @@ function handleKeyUp(evt){
     //TODO
     //If page loses focus keeps moving bug
     //
+
+    if(evt.keyCode == 113){ //F2 key, debug menu
+        debugScreen.visible = !debugScreen.visible;
+    }
+    if(evt.keyCode == 115){ //F4 key, change framerate
+        
+        if(debugScreen.FPSlock == 60){
+            debugScreen.changeFrameRate(30);
+        }
+        if(debugScreen.FPSlock == 30){
+            debugScreen.changeFrameRate(60);
+        }
+    }
     if(respawnTimer!=-1){
         moveDirection[0]=0;
         moveDirection[1]=0;
@@ -1548,12 +1609,20 @@ function mouseDoubleClick(evt){
     }
 }
 
+function resizeWindow(){
+    WIDTH = canvas.width = window.innerWidth/(scaleSize/tileSize);
+    HEIGHT = canvas.height = window.innerHeight/(scaleSize/tileSize);
+    canvas.style.width= window.innerWidth;
+    canvas.style.height = window.innerHeight;
+}
+
 document.addEventListener("keydown",handleKeyDown);
 document.addEventListener("keyup",handleKeyUp);
 canvas.addEventListener("mousedown",mouseDown);
 canvas.addEventListener("mousemove",mouseMove);
 canvas.addEventListener("mouseup",mouseUp);
 canvas.addEventListener("dblclick",mouseDoubleClick);
+window.addEventListener('resize', resizeWindow);
 
     </script>
     </body>

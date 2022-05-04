@@ -27,8 +27,11 @@ function processMapLayers(map){
                 }
             }
 
-
+            if(result.map.layer.length==4){
+                var tmpcol = result.map.layer[3].data[0]._.split("\r\n").slice(1,result.map.layer[2].data[0]._.length);
+            }else{
             var tmpcol = result.map.layer[2].data[0]._.split("\r\n").slice(1,result.map.layer[2].data[0]._.length);
+            }
             map.collisionLayer = [];
             for(var i=0;i<tmpcol.length;i++){
                 if(tmpcol[i]==''){continue;}

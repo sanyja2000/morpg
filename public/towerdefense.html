@@ -1,0 +1,257 @@
+<html>
+<head>
+
+<script src="perlin.js"></script>
+<style>
+    canvas{float:left};
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+
+var WIDTH = canvas.width = 1200;
+var HEIGHT = canvas.height = 700;
+
+function dist(a,b){
+    return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+}
+
+
+function TowerPlace(x,y){
+    this.x = x;
+    this.y = y;
+    this.tower = null;
+    this.draw = function(){
+        if(this.tower == null){
+            ctx.fillStyle = "rgba(0,255,0,0.7)";
+            ctx.fillRect(this.x-5,this.y-5,10,10);
+        }else{
+            this.tower.draw(this.x,this.y);
+        }
+    }
+}
+
+function Tower(damage,speed){
+    this.r = 100;
+    this.damage = damage;
+    this.speed = speed;
+    this.lastShot = 0;
+    this.target = null;
+    this.barrelAngle = 0;
+    this.draw = function(x,y){
+        ctx.fillStyle = "rgba(0,255,0,0.3)";
+        ctx.beginPath();
+        ctx.arc(x,y,this.r,0,Math.PI*2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "blue";
+        ctx.fillRect(x-5,y-10,10,20);
+        ctx.save();
+        ctx.translate(x,y-2);
+        ctx.rotate(this.barrelAngle);
+        ctx.fillStyle = "black";
+        ctx.fillRect(-2,0,4,10);
+        ctx.restore();
+    }
+    this.shoot = function(time,towerPlace){
+        if(time > this.lastShot+1/speed*1000){
+            if(this.target != null && this.target.hp<=0){
+                this.target = null;
+            }
+            if(this.target == null){
+                
+                for(var i=0;i<enemies.length;i++){
+                    if(dist(towerPlace,enemies[i])<this.r){
+                        this.target = enemies[i];
+                        
+                        break;
+                    }
+                }
+            }
+            if(this.target != null){
+                if(dist(towerPlace,this.target)>this.r){
+                    this.target = null;
+                    return;
+                }
+                this.barrelAngle = Math.atan2(towerPlace.y-2-this.target.y-5,towerPlace.x-this.target.x-3)+Math.PI/2;
+                this.target.hp-=this.damage;
+                console.log("shot");
+            
+                ctx.fillStyle = "yellow";
+                ctx.fillRect(towerPlace.x+Math.cos(this.barrelAngle+Math.PI/2)*10,towerPlace.y-2+Math.sin(this.barrelAngle+Math.PI/2)*10,2,2);
+
+                if(this.target.hp<=0){
+                    enemies.splice(enemies.indexOf(this.target),1);
+                    this.target = null;
+                    
+                }
+                this.lastShot = time;
+            
+            }
+
+        }
+    }
+}
+
+
+function getRandomColor(){
+    return "rgb("+Math.floor(Math.random()*256)+","+Math.floor(Math.random()*256)+","+Math.floor(Math.random()*256)+")";
+}
+
+function Enemy(x,y,vel,hp){
+    this.x = x;
+    this.y = y;
+    this.vel = vel;
+    this.color = getRandomColor();
+    this.hp = hp;
+    this.moveAngle = 0;
+    this.pathPoint = 0;
+    this.draw = function(){
+
+        ctx.fillStyle = "black";
+        ctx.fillRect(this.x-10,this.y-15,20,3);
+
+
+        ctx.fillStyle = "red";
+        ctx.fillRect(this.x-10,this.y-15,20*this.hp/100,3);
+
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x-3,this.y-5,6,10);
+    }
+    this.move = function(){
+        if( (this.x+3-mapPath[this.pathPoint][0])**2+(this.y+5-mapPath[this.pathPoint][1])**2 < 100){
+            
+            this.pathPoint++;
+            if(this.pathPoint==mapPath.length){
+                //Decrease Tower HP
+                return;
+            }else{
+                this.moveAngle = Math.atan2(mapPath[this.pathPoint][1]-this.y,mapPath[this.pathPoint][0]-this.x);
+            }
+        }
+        this.x += this.vel*Math.cos(this.moveAngle);
+        this.y += this.vel*Math.sin(this.moveAngle);
+    }
+
+    
+}
+
+var towerPlaces = [];
+/*
+for(var i=0;i<8;i++){
+    towerPlaces.push(new TowerPlace(50+Math.random()*(WIDTH-50),50+Math.random()*(HEIGHT-50)));
+    towerPlaces[i].tower = new Tower(20+Math.random()*80,5+Math.floor(Math.random()*3));
+
+}
+*/
+
+var mapPath = [[53,609],[259,631],[466,612],[605,621],[749,616],[931,543],[1080,541],[1134,392],[1081,257],[919,237],[836,277],[780,383],[630,446],[453,431],[183,396],[133,246],[219,113],[397,88],[565,165],[759,123],[907,76],[1059,102],[1158,39]];
+
+var enemies = [];
+var enemyCount = 800;
+var towerCount = 8;
+
+var yourHealth = 1000;
+
+var lastSpawn = 0;
+function update(){
+    var now = new Date().getTime();
+
+
+    if(now>lastSpawn+60){
+        if(enemyCount>0){
+            enemies.push(new Enemy(mapPath[0][0],mapPath[0][1],4,100));
+            enemyCount--;
+            lastSpawn= now;
+        }
+        
+    }
+    ctx.fillStyle = "rgb(51,51,51)";
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(0,0,WIDTH,20);
+    ctx.fillStyle = "maroon";
+    ctx.fillRect(0,0,WIDTH*yourHealth/1000,20);
+
+    ctx.textAlign = "center";
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "white";
+    ctx.fillText(yourHealth,WIDTH/2,18);
+
+    //Try drawing map path
+    if(mapPath.length>0){
+        ctx.strokeStyle = "green";
+        ctx.beginPath();
+        ctx.moveTo(mapPath[0][0],mapPath[0][1]);
+        for(var i=1;i<mapPath.length;i++){
+            ctx.lineTo(mapPath[i][0],mapPath[i][1]);
+        }
+        //ctx.closePath();
+        ctx.stroke();
+    }
+
+    for(var i=0;i<towerPlaces.length;i++){
+        towerPlaces[i].draw();
+        if(towerPlaces[i].tower!=null){
+            towerPlaces[i].tower.shoot(now,towerPlaces[i]);
+        }
+    }
+
+    for(var i=0;i<enemies.length;i++){
+        if(enemies[i].hp<=0){
+            enemies.splice(i,1);
+            i--;
+            continue;
+        }
+        enemies[i].draw();
+        enemies[i].move();
+        if(enemies[i].pathPoint == mapPath.length){
+            yourHealth-=5;
+            enemies.splice(i,1);
+            i--;
+        }
+    }
+
+
+}
+
+function click(evt){
+    var rect = canvas.getBoundingClientRect();
+    var mouseX = evt.clientX - rect.left;
+    var mouseY = evt.clientY - rect.top;
+
+    if(towerCount>0){
+        towerPlaces.push(new TowerPlace(mouseX,mouseY));
+        towerPlaces[towerPlaces.length-1].tower = new Tower(20+Math.random()*80,5+Math.floor(Math.random()*3));
+        towerCount--;
+    }
+    /*
+    for(var i=0;i<towerPlaces.length;i++){
+        if((towerPlaces[i].x+3-mouseX)**2+(towerPlaces[i].x+3-mouseX)**2 < 100){}
+    }
+    */
+    //create map
+    
+    /*
+    if(evt.shiftKey && mapPath.length>0){
+        mapPath.splice(mapPath.length-1,1);
+    }else{
+        mapPath.push([mouseX,mouseY]);
+    }*/
+}
+
+canvas.addEventListener("mousedown",click);
+
+var loop = setInterval(update,1000/30);
+
+</script>
+</body>
+</html>

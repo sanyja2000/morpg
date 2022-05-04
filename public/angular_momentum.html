@@ -1,0 +1,274 @@
+<html>
+<head>
+
+<script src="perlin.js"></script>
+<style>
+    canvas{float:left};
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+
+var WIDTH = canvas.width = 800;
+var HEIGHT = canvas.height = 600;
+
+
+var tickSound = new Audio();
+tickSound.src = "prizewheel.wav";
+tickSound.volume = 0.3;
+
+function getRandomColor(){
+    return "rgb("+Math.floor(Math.random()*256)+","+Math.floor(Math.random()*256)+","+Math.floor(Math.random()*256)+")";
+}
+
+var slices = 8;
+var sliceColors = [];
+var sliceText = ["Unity is gay","Java is bad","Javascript is awesome","Barnabás is gay","CSS is kinda not the best","I'm bored.","500 RP","Insert text here"];
+for(var i=0;i<slices;i++){
+    
+    sliceColors.push(getRandomColor());
+    if(sliceText.length<=i){
+        sliceText.push("");
+    }
+}
+var radius = 200;
+
+function dist(a,b){
+    return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+}
+
+var angle = 0;
+
+var lastAngle = 0;
+
+var lastTickAngle = 0;
+
+function update(){
+    ctx.fillStyle = "rgb(51,51,51)";
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+
+    ctx.strokeStyle = "black";
+    ctx.fillStyle = "white";
+    ctx.lineWidth = 2;
+    
+    ctx.moveTo(WIDTH/2,HEIGHT/2);
+    ctx.textAlign = "right";
+    ctx.font = "16px Arial";
+    var halfAngle = Math.PI*2/slices/2;
+    for(var i=0;i<slices;i++){
+        ctx.fillStyle = sliceColors[i];
+        angle = grabbedAngle + i/slices*Math.PI*2;
+        ctx.beginPath();
+        
+        ctx.lineTo(WIDTH/2+Math.cos(angle)*radius,HEIGHT/2+Math.sin(angle)*radius);
+        
+        
+        ctx.arc(WIDTH/2,HEIGHT/2,radius,angle,angle+1/slices*Math.PI*2-0.01);
+        ctx.lineTo(WIDTH/2,HEIGHT/2);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+        //draw text
+        ctx.save();
+        ctx.fillStyle = "black";
+        ctx.translate(WIDTH/2+Math.cos(angle+halfAngle)*radius*0.95,HEIGHT/2+Math.sin(angle+halfAngle)*radius*0.95);
+        ctx.rotate(angle+halfAngle);
+        ctx.fillText(sliceText[i],0,0);
+        
+        ctx.restore();
+        
+        
+
+    }
+    ctx.save();
+    ctx.fillStyle = "lime";
+    ctx.beginPath();
+    ctx.translate(WIDTH/2+radius*1.1,HEIGHT/2);
+
+    if(Math.abs(lastTickAngle-grabbedAngle)>Math.PI*2/slices){
+        lastTickAngle = grabbedAngle;
+        tickSound.currentTime = 0;
+        tickSound.play();
+        ctx.rotate(-Math.sign(rotateVel)*0.1);
+    }
+    
+
+    //draw pointer
+    
+    
+    ctx.lineTo(0,-10);
+    ctx.lineTo(-radius*0.12,0);
+    ctx.lineTo(0,10);
+    ctx.lineTo(0,0);
+
+
+/*
+    ctx.moveTo(WIDTH/2+radius*0.98,HEIGHT/2);
+    ctx.lineTo(WIDTH/2+radius*1.1,HEIGHT/2-10);
+    ctx.lineTo(WIDTH/2+radius*1.1,HEIGHT/2+10);
+    ctx.lineTo(WIDTH/2+radius*0.98,HEIGHT/2);
+    */
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    
+    if(!grabbing){
+        if(!angleCalculated){
+            var way = Math.sign()
+            var calculated = normalizeAngle(grabbedAngle-lastAngle)/(1000/60)*10
+            if(Math.sign(rotateVel)==Math.sign(calculated)){
+                rotateVel+=calculated;
+            }else{
+                rotateVel = normalizeAngle(grabbedAngle-lastAngle)/(1000/60)*10;
+            }
+            angleCalculated = true;
+        }
+        grabbedAngle+=rotateVel;
+        rotateVel*=0.98;
+        
+    }
+    lastAngle = grabbedAngle;
+}
+
+var loop = setInterval(update,1000/60);
+
+var grabbedAngle = 0;
+var actualAngle = 0;
+var angleOffset = 0;
+
+var angleCalculated = false;
+
+var grabbing = false;
+
+var rotateVel = 0;
+
+function normalizeAngle(a){
+    var angle = a;
+    while(angle<-Math.PI){
+        angle+=Math.PI*2;
+    }
+    while(angle>Math.PI){
+        angle-=Math.PI*2;
+    }
+    return angle;
+}
+
+function mouseDown(evt){
+    var now = new Date().getTime();
+    var rect = canvas.getBoundingClientRect();
+    var mouseX = evt.clientX - rect.left;
+    var mouseY = evt.clientY - rect.top;
+
+    angleCalculated = false;
+
+    if(dist({x:mouseX,y:mouseY},{x:WIDTH/2,y:HEIGHT/2})<radius){
+
+        angleOffset = normalizeAngle(-(grabbedAngle-Math.atan2(mouseY-HEIGHT/2,mouseX-WIDTH/2)));
+        
+        lastMoveTime = now;
+
+        grabbing = true;
+        grabbedAngle = Math.atan2(mouseY-HEIGHT/2,mouseX-WIDTH/2)-angleOffset;
+        canvas.style.cursor = "grabbing";
+    }
+}
+
+var lastMoveTime = 0;
+var lastMouseAngle = 0;
+
+function constrain(n,from,to){
+    if(n>to){
+        return to;
+    }
+    if(n<from){
+        return from;
+    }
+    return n;
+}
+
+function mouseMove(evt){
+    var now = new Date().getTime();
+
+    var rect = canvas.getBoundingClientRect();
+    var mouseX = evt.clientX - rect.left;
+    var mouseY = evt.clientY - rect.top;
+    
+    lastMouseAngle = Math.atan2(mouseY-HEIGHT/2,mouseX-WIDTH/2);
+
+    if(grabbing){
+        lastMouseAngle = grabbedAngle;
+        grabbedAngle = Math.atan2(mouseY-HEIGHT/2,mouseX-WIDTH/2)-angleOffset;
+    }
+    if(dist({x:mouseX,y:mouseY},{x:WIDTH/2,y:HEIGHT/2})<radius){
+        if(grabbing){
+            canvas.style.cursor = "grabbing";
+            //lastMouseAngle = grabbedAngle;
+            //grabbedAngle = Math.atan2(mouseY-HEIGHT/2,mouseX-WIDTH/2)-angleOffset;
+            lastMoveTime = now;
+        }else{
+            canvas.style.cursor = "grab";
+        }
+        
+    }else{
+        if(grabbing){
+            canvas.style.cursor = "grabbing";
+        }else{
+            canvas.style.cursor = "default";
+        }
+    }
+    
+}
+
+
+function mouseUp(evt){
+    var rect = canvas.getBoundingClientRect();
+    var mouseX = evt.clientX - rect.left;
+    var mouseY = evt.clientY - rect.top;
+
+    var now = new Date().getTime();
+    if(grabbing){
+        mouseAngle = Math.atan2(mouseY-HEIGHT/2,mouseX-WIDTH/2);
+        /*if(Math.abs(now-lastMoveTime)/1000<0.001){
+            console.log("minimal");
+            rotateVel = 0;
+        }else{*/
+            //rotateVel = constrain(normalizeAngle(-mouseAngle+lastMouseAngle)/((now-lastMoveTime)/1),-6,6);
+            //console.log("time: "+(now-lastMoveTime))
+            //rotateVel = normalizeAngle(-mouseAngle+lastMouseAngle)/((now-lastMoveTime)/1);
+            
+            //console.log(mouseAngle-lastMouseAngle);
+        //}
+    }
+
+    grabbing = false;
+
+    actualAngle = grabbedAngle;
+
+    if(dist({x:mouseX,y:mouseY},{x:WIDTH/2,y:HEIGHT/2})<radius){
+        if(grabbing){
+        //    grabbedAngle = Math.atan2(mouseY-HEIGHT/2,mouseX-WIDTH/2);
+        }
+        canvas.style.cursor = "grab";
+    }else{
+        canvas.style.cursor = "default";
+    }
+
+}
+
+canvas.addEventListener("mousedown",mouseDown);
+canvas.addEventListener("mousemove",mouseMove);
+canvas.addEventListener("mouseup",mouseUp);
+
+
+</script>
+</body>
+</html>

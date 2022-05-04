@@ -35,6 +35,7 @@ for(var i=0;i<maps.length;i++){
   maps[i].doors = [];
   maps[i].chests = [];
   maps[i].dayTime = 0;
+  maps[i].lights = [];
   mapClass.processMapLayers(maps[i]);
 }
 
@@ -78,6 +79,8 @@ maps[1].NPCs = [{id:4,name:"Reaper",quests:[],questInteractions:[{questId:4,text
 maps[1].NPCsClientSide = [{id:4,name:"Reaper",x:646,y:980,skin:5}];
 
 maps[0].chests = [{id:0, x:100, y:100, imageIndex:0, isOpen:false, key:{name:"key",pieces:1,equipment:false,iconNumber:70}, loot:[] }];
+
+maps[0].lights =  [[365, 140],[655,365],[623,653],[174, 334]];
 
 maps[3].doors = [{id:0, x:1024 ,y:544 ,imageIndex:0, isOpen:false, key:{name:"key",pieces:1,equipment:false,iconNumber:70}}];
 
@@ -493,6 +496,7 @@ function playerUpdate(){
         projectileArr:maps[h].projectiles,
         doorsArr:maps[h].doors,
         chestsArr:maps[h].chests,
+        lightsArr:maps[h].lights,
         daytime:maps[h].dayTime
       });
     }
@@ -618,6 +622,8 @@ function itemUpdate(){
     for(var i=0;i<maps[h].players.length;i++){
       itemClass.refreshBaseStats(maps[h].players[i],io);
       itemClass.updateCooldowns(maps[h].players[i]);
+      //Move ping to elsewhere
+      io.to(maps[h].players[i].id).emit("pingForward",{});
     }
     //if(h==0){console.log(maps[h].dayTime);}
   }
@@ -639,7 +645,7 @@ function newConnection(socket){
   //New Player connects
   //increase item ids
   //{id:itemIds++, iconNumber:17, name:"pickaxe", equipment: true, pieces:3}
-  maps[0].players.push({name:"aa",playerHit:0, respawnTimer:-1, poisoned:0, facing:0,baseHealth:250,maxHealth:250, health:250, skin:0, id:socket.id, x:0,y:0, moveDir:[0,0], inventory:new Array(20), acceptedQuests:[], availableQuests:[0,5], moveSpeed:[3,3], buffs:[],
+  maps[0].players.push({name:"aa",playerHit:0, ping:0, lastPingTime:0, respawnTimer:-1, poisoned:0, facing:0,baseHealth:250,maxHealth:250, health:250, skin:0, id:socket.id, x:0,y:0, moveDir:[0,0], inventory:new Array(20), acceptedQuests:[], availableQuests:[0,5], moveSpeed:[3,3], buffs:[],
       equipment:new Array(4), abilityAnimationImg:null, abilityAnimationFrame:-1/*[
         {id:itemIds++, name:"sword",description:["Physical damage 20"], physicalDmg:20,slotNumber:0, pieces:1, equipment:true, iconNumber:16},
         {id:itemIds++, name:"ring", slotNumber:1, description:["Health regen 2"],healthRegen:2, pieces:1, equipment:true, iconNumber:45},
@@ -665,6 +671,16 @@ function newConnection(socket){
       }
     }
   }
+  socket.on("pingBack",function(data){
+    for(var i=0;i<maps[data.map].players.length;i++){
+      if(maps[data.map].players[i].id == socket.id){
+        var now = Date.now();
+        maps[data.map].players[i].ping = (now-maps[data.map].players[i].lastPing)/2;
+        maps[data.map].players[i].lastPing = now;
+        break;
+      }
+    }
+  });
   socket.on("changeToMap",changeToMap);
   function changeToMap(data){
     movePlayerToMap(socket.id,data.from,data.to);
