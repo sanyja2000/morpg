@@ -1,9 +1,9 @@
-#MORPG
+# MORPG
 Multiplayer game made with Javascript on server and client side using Socket.IO
 
-#Features:
+# Features:
 
-##Quests
+## Quests
 ![quests](https://github.com/sanyja2000/morpg/blob/master/screenshots/scrn1.PNG?raw=true)
 
 ## A basic inventory system
